@@ -1,0 +1,5 @@
+---
+triple:          'arm64-apple-darwin'
+binary-path:     '/Users/jomofisher/projects/dap/src/test/resources/fixtures/c/spin'
+relocations:     []
+...

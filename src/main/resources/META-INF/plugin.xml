@@ -1,33 +1,29 @@
 <!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
 <idea-plugin>
-    <!-- Unique identifier of the plugin. It should be FQN. It cannot be changed between the plugin versions. -->
     <id>com.github.jomof.dap</id>
-
-    <!-- Public plugin name should be written in Title Case.
-     Guidelines: https://plugins.jetbrains.com/docs/marketplace/best-practices-for-listing.html#plugin-name -->
     <name>Dap</name>
+    <vendor>jomof</vendor>
 
-    <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
-    <vendor url="https://www.yourcompany.com">YourCompany</vendor>
-
-    <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
-         Guidelines: https://plugins.jetbrains.com/docs/marketplace/best-practices-for-listing.html#plugin-description -->
     <description><![CDATA[
-        Enter short description for your plugin here.<br>
-        <em>most HTML tags may be used</em>
+        Bridges the Debug Adapter Protocol (DAP) to IntelliJ's debugger framework
+        so any DAP-conformant debug adapter (lldb-dap, CodeLLDB, delve-dap, ...) can
+        drive a native-code debug session in CLion and other IntelliJ-based IDEs.<br>
+        <em>Scaffolded for C/C++ and Rust via lldb-dap/CodeLLDB and Go via delve-dap.</em>
         ]]></description>
 
-    <!-- Product and plugin compatibility requirements.
-         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
     <depends>com.intellij.modules.platform</depends>
 
-    <resource-bundle>messages.MyMessageBundle</resource-bundle>
-
-    <!-- Extensions defined by the plugin.
-         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow id="MyToolWindow" factoryClass="com.github.jomof.MyToolWindowFactory"
-                    icon="AllIcons.Toolwindows.ToolWindowPalette"/>
+        <!-- Scaffold: lets us actually run the plugin from CLion against real debug adapters.
+             These registrations live in the scaffold package and will be removed when the
+             production DAP layer is transplanted into a larger codebase. -->
+        <programRunner implementation="com.github.jomof.dap.scaffold.run.ScaffoldDapDebugRunner"/>
+        <configurationType implementation="com.github.jomof.dap.scaffold.run.ScaffoldDapConfigurationType"/>
+        <xdebugger.breakpointType
+            implementation="com.github.jomof.dap.scaffold.breakpoints.CppLineBreakpointType"/>
+        <xdebugger.breakpointType
+            implementation="com.github.jomof.dap.scaffold.breakpoints.RustLineBreakpointType"/>
+        <xdebugger.breakpointType
+            implementation="com.github.jomof.dap.scaffold.breakpoints.GoLineBreakpointType"/>
     </extensions>
-
 </idea-plugin>
