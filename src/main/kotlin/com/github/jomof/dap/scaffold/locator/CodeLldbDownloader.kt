@@ -6,10 +6,14 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.nio.channels.FileChannel
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.StandardCopyOption
+import java.nio.file.StandardOpenOption
 import java.time.Duration
+import java.util.Comparator
 import java.util.zip.ZipInputStream
 
 /**
@@ -60,14 +64,30 @@ open class CodeLldbDownloaderImpl(
                     "set DAP_CODELLDB to a hand-installed binary.",
             )
         existingInstall()?.let { return it }
-        val release = latestRelease()
-        val asset0 = release.assets.firstOrNull { it.name == asset }
-            ?: throw IOException(
-                "CodeLLDB release ${release.tagName} does not contain expected asset $asset",
-            )
-        val target = cacheRoot.resolve(release.tagName)
-        downloadAndExtract(asset0.downloadUrl, target)
-        return adapterBinary(target).also { markExecutable(it) }
+        return withInstallLock {
+            existingInstall()?.let { return@withInstallLock it }
+            val release = latestRelease()
+            val asset0 = release.assets.firstOrNull { it.name == asset }
+                ?: throw IOException(
+                    "CodeLLDB release ${release.tagName} does not contain expected asset $asset",
+                )
+            val target = cacheRoot.resolve(release.tagName)
+            if (Files.exists(target)) {
+                deleteRecursively(target)
+            }
+            val staging = Files.createTempDirectory(cacheRoot, "${release.tagName}.partial-")
+            try {
+                downloadAndExtract(asset0.downloadUrl, staging)
+                markExecutable(adapterBinary(staging))
+                validateInstall(staging)
+                Files.writeString(staging.resolve(COMPLETE_MARKER), release.tagName)
+                moveInstall(staging, target)
+                adapterBinary(target)
+            } catch (throwable: Throwable) {
+                runCatching { deleteRecursively(staging) }
+                throw throwable
+            }
+        }
     }
 
     /**
@@ -83,7 +103,7 @@ open class CodeLldbDownloaderImpl(
             ?.sortedByDescending { it.name } // pick highest tag wins lexically (v1.12.0 < v1.12.10)
             ?.firstNotNullOfOrNull { dir ->
                 val candidate = adapterBinary(dir.toPath())
-                if (Files.isExecutable(candidate)) candidate else null
+                if (isCompleteInstall(dir.toPath())) candidate else null
             }
     }
 
@@ -200,7 +220,55 @@ open class CodeLldbDownloaderImpl(
         runCatching { path.toFile().setExecutable(true) }
     }
 
+    @Synchronized
+    private fun withInstallLock(block: () -> Path): Path {
+        Files.createDirectories(cacheRoot)
+        FileChannel.open(
+            cacheRoot.resolve(INSTALL_LOCK),
+            StandardOpenOption.CREATE,
+            StandardOpenOption.WRITE,
+        ).use { channel ->
+            channel.lock().use {
+                return block()
+            }
+        }
+    }
+
+    private fun isCompleteInstall(versionDir: Path): Boolean =
+        Files.isRegularFile(versionDir.resolve(COMPLETE_MARKER)) &&
+            Files.isExecutable(adapterBinary(versionDir)) &&
+            Files.isRegularFile(liblldbBinary(versionDir))
+
+    private fun validateInstall(versionDir: Path) {
+        val adapter = adapterBinary(versionDir)
+        if (!Files.isExecutable(adapter)) {
+            throw IOException("Extracted CodeLLDB adapter is missing or not executable: $adapter")
+        }
+        val liblldb = liblldbBinary(versionDir)
+        if (!Files.isRegularFile(liblldb)) {
+            throw IOException("Extracted CodeLLDB liblldb is missing: $liblldb")
+        }
+    }
+
+    private fun moveInstall(staging: Path, target: Path) {
+        try {
+            Files.move(staging, target, StandardCopyOption.ATOMIC_MOVE)
+        } catch (_: AtomicMoveNotSupportedException) {
+            Files.move(staging, target)
+        }
+    }
+
+    private fun deleteRecursively(path: Path) {
+        if (!Files.exists(path)) return
+        Files.walk(path).use { walk ->
+            walk.sorted(Comparator.reverseOrder()).forEach { Files.deleteIfExists(it) }
+        }
+    }
+
     companion object {
+        private const val COMPLETE_MARKER = ".complete"
+        private const val INSTALL_LOCK = ".install.lock"
+
         private const val RELEASES_LATEST_URL =
             "https://api.github.com/repos/vadimcn/codelldb/releases/latest"
 

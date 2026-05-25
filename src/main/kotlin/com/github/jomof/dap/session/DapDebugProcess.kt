@@ -271,11 +271,11 @@ class DapDebugProcess(
                 // file's breakpoint set to the adapter, awaiting the response
                 // so they're armed before the debuggee resumes.
                 breakpointSync.flushAllAndAwait()
+                DapExceptionBreakpoints.applyDefaults(profile, capabilities, client)
                 if (capabilities.supportsConfigurationDoneRequest) {
                     log.info("start(): sending configurationDone")
                     client.configurationDone()
                 }
-                DapExceptionBreakpoints.applyDefaults(profile, capabilities, client)
                 // Now the adapter is ready to settle the launch response.
                 launchAck.await()
                 // After configurationDone the adapter resumes the inferior unless
