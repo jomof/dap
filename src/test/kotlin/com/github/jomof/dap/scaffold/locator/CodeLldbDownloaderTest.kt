@@ -125,7 +125,7 @@ class CodeLldbDownloaderTest {
         }
     }
 
-    @Test fun `ensureInstalled is a no-op when cache already contains a binary`() {
+    @Test fun `ensureInstalled is a no-op when cache already contains a complete install`() {
         val cacheRoot = tmp.newFolder("cache").toPath()
         // Pre-seed the cache with a fake v9.9.9 install so we can
         // assert the downloader doesn't try to hit the network.
@@ -135,6 +135,9 @@ class CodeLldbDownloaderTest {
         Files.createDirectories(installed.parent)
         Files.write(installed, byteArrayOf(0x7F))
         installed.toFile().setExecutable(true)
+        Files.createDirectories(cacheRoot.resolve("v9.9.9/extension/lldb/lib"))
+        Files.write(cacheRoot.resolve("v9.9.9/extension/lldb/lib/liblldb.dylib"), byteArrayOf(0x01))
+        Files.writeString(cacheRoot.resolve("v9.9.9/.complete"), "v9.9.9")
 
         val downloader = object : CodeLldbDownloaderImpl(
             cacheRoot = cacheRoot,
@@ -156,6 +159,7 @@ class CodeLldbDownloaderTest {
         val cacheRoot = tmp.newFolder("cache").toPath()
         val vsixBytes = buildVsixBytes {
             entry("extension/adapter/codelldb", "binary-bytes".toByteArray())
+            entry("extension/lldb/lib/liblldb.dylib", "liblldb-bytes".toByteArray())
         }
         val downloader = object : CodeLldbDownloaderImpl(
             cacheRoot = cacheRoot,
@@ -184,6 +188,48 @@ class CodeLldbDownloaderTest {
         )
         assertTrue("adapter should be executable", Files.isExecutable(result))
         assertEquals("binary-bytes", String(Files.readAllBytes(result)))
+        assertEquals(
+            "liblldb-bytes",
+            String(Files.readAllBytes(cacheRoot.resolve("v1.12.2/extension/lldb/lib/liblldb.dylib"))),
+        )
+        assertTrue("install should be marked complete", Files.exists(cacheRoot.resolve("v1.12.2/.complete")))
+    }
+
+    @Test fun `ensureInstalled replaces partial cache entry before returning`() {
+        val cacheRoot = tmp.newFolder("cache").toPath()
+        val partial = cacheRoot.resolve("v1.12.2/extension/adapter/codelldb")
+        Files.createDirectories(partial.parent)
+        Files.write(partial, "partial".toByteArray())
+        partial.toFile().setExecutable(true)
+
+        val vsixBytes = buildVsixBytes {
+            entry("extension/adapter/codelldb", "fresh-binary".toByteArray())
+            entry("extension/lldb/lib/liblldb.dylib", "fresh-liblldb".toByteArray())
+        }
+        val downloader = object : CodeLldbDownloaderImpl(
+            cacheRoot = cacheRoot,
+            osName = "Mac OS X",
+            osArch = "aarch64",
+        ) {
+            override fun fetchLatestReleaseJson(): String = """
+                {
+                  "tag_name":"v1.12.2",
+                  "assets":[
+                    {"name":"codelldb-darwin-arm64.vsix","browser_download_url":"http://example.test/codelldb-darwin-arm64.vsix"}
+                  ]
+                }
+            """.trimIndent()
+
+            override fun openAssetStream(url: String): InputStream = ByteArrayInputStream(vsixBytes)
+        }
+
+        val result = downloader.ensureInstalled()
+        assertEquals(
+            cacheRoot.resolve("v1.12.2/extension/adapter/codelldb").toAbsolutePath(),
+            result.toAbsolutePath(),
+        )
+        assertEquals("fresh-binary", String(Files.readAllBytes(result)))
+        assertTrue("install should be marked complete", Files.exists(cacheRoot.resolve("v1.12.2/.complete")))
     }
 
     @Test fun `ensureInstalled fails fast on unknown host`() {
