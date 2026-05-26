@@ -2,7 +2,6 @@ package com.github.jomof.dap.session
 
 import com.github.jomof.dap.breakpoints.DapBreakpointHandler
 import com.github.jomof.dap.breakpoints.DapBreakpointSync
-import com.github.jomof.dap.breakpoints.DapExceptionBreakpoints
 import com.github.jomof.dap.breakpoints.DapSyntheticPauseGate
 import com.github.jomof.dap.client.DapCapabilities
 import com.github.jomof.dap.client.DapClient
@@ -278,15 +277,19 @@ class DapDebugProcess(
                 ApplicationManager.getApplication().invokeAndWait {
                     session.initBreakpoints()
                 }
-                // Now state is populated; bypass the debounce and ship every
-                // file's breakpoint set to the adapter, awaiting the response
-                // so they're armed before the debuggee resumes.
-                breakpointSync.flushAllAndAwait()
-                if (capabilities.supportsConfigurationDoneRequest) {
-                    log.info("start(): sending configurationDone")
-                    client.configurationDone()
+                DapStartupSequence.configureBeforeResume(
+                    profile = profile,
+                    capabilities = capabilities,
+                    client = client,
+                ) {
+                    // Now state is populated; bypass the debounce and ship every
+                    // file's breakpoint set to the adapter, awaiting the response
+                    // so they're armed before the debuggee resumes.
+                    breakpointSync.flushAllAndAwait()
+                    if (capabilities.supportsConfigurationDoneRequest) {
+                        log.info("start(): sending configurationDone")
+                    }
                 }
-                DapExceptionBreakpoints.applyDefaults(profile, capabilities, client)
                 // Now the adapter is ready to settle the launch response.
                 launchAck.await()
                 // After configurationDone the adapter resumes the inferior unless
