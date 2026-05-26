@@ -19,6 +19,7 @@ import org.junit.Test
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -60,7 +61,7 @@ class CodeLldbPauseResumeIntegrationTest {
 
         val stoppedEvents = java.util.concurrent.LinkedBlockingDeque<DapEvent.Stopped>()
         val collector = launch(start = CoroutineStart.UNDISPATCHED) {
-            client.events.filterIsInstance<DapEvent.Stopped>().collect { stoppedEvents.put(it) }
+            client.events.filterIsInstance<DapEvent.Stopped>().collect { stoppedEvents.addLast(it) }
         }
         try {
             withTimeout(HANDSHAKE_TIMEOUT) {
@@ -109,7 +110,7 @@ class CodeLldbPauseResumeIntegrationTest {
     private suspend fun takeNextStop(queue: java.util.concurrent.BlockingDeque<DapEvent.Stopped>): DapEvent.Stopped {
         while (true) {
             queue.pollFirst()?.let { return it }
-            kotlinx.coroutines.delay(20)
+            kotlinx.coroutines.delay(20.milliseconds)
         }
     }
 

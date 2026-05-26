@@ -6,6 +6,7 @@ plugins {
     id("org.jetbrains.changelog")
     id("org.jetbrains.intellij.platform")
     alias(libs.plugins.detekt)
+    alias(libs.plugins.qodana)
 }
 
 kotlin {
@@ -62,6 +63,32 @@ detekt {
     ignoreFailures = false
     source.setFrom(files("src/main/kotlin", "src/test/kotlin"))
     autoCorrect = false
+}
+
+// ─── Qodana ─────────────────────────────────────────────────────────
+//
+// Qodana runs the full IntelliJ inspection engine headlessly via
+// Docker, surfacing IDEA's own warnings (the ones detekt + ktlint
+// can't reach: "Property could be private", "Convert to expression
+// body", "Redundant qualifier", platform-specific inspections, etc.).
+//
+// Configuration lives in `qodana.yaml` so it's tool-portable; only
+// the local result/cache paths and the report-on-failure switch are
+// in Gradle. Reports go to `.qodana/` (gitignored) instead of
+// `build/` so they survive `./gradlew clean` and the IDE doesn't
+// index multi-megabyte SARIF blobs.
+qodana {
+    cachePath.set(file(".qodana/cache").absolutePath)
+    resultsPath.set(file(".qodana/results").absolutePath)
+    qodanaPath.set(file(".qodana/cli").absolutePath)
+}
+
+tasks.named<org.jetbrains.qodana.tasks.QodanaScanTask>("qodanaScan") {
+    // `--fail-threshold 0` makes the task fail on any finding so the
+    // signal isn't lost when later wired into `check`. Drop / raise
+    // it once we're tracking a baseline and only want NEW findings
+    // to fail.
+    arguments.set(listOf("--fail-threshold", "0"))
 }
 
 tasks.withType<dev.detekt.gradle.Detekt>().configureEach {

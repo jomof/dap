@@ -7,6 +7,7 @@ import kotlinx.coroutines.sync.withLock
 import org.eclipse.lsp4j.debug.SetBreakpointsArguments
 import org.eclipse.lsp4j.debug.SetBreakpointsResponse
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Encapsulates the "pause → setBreakpoints → continue" workaround that
@@ -241,7 +242,7 @@ class DapSyntheticPauseGate(
 
             val deadline = System.currentTimeMillis() + pauseAckTimeoutMs
             while (inferiorRunning && System.currentTimeMillis() < deadline) {
-                delay(pauseAckPollMs)
+                delay(pauseAckPollMs.milliseconds)
             }
             if (inferiorRunning) {
                 log.warn("synthetic pause: pause didn't take effect in ${pauseAckTimeoutMs}ms; sending setBreakpoints anyway")

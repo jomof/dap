@@ -27,6 +27,7 @@ import org.junit.Test
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -108,7 +109,13 @@ class LldbDapMidSessionBreakpointIdeFlowIntegrationTest {
                             "reason=${event.payload.reason} " +
                             "threadId=${event.payload.threadId} " +
                             "hitBp=${event.payload.hitBreakpointIds?.toList()}"
-                        if (!isSynthetic) stoppedEvents.put(event)
+                        // `addLast` not `put`: the deque is unbounded so
+                        // `put`'s "wait for capacity" semantic is dead
+                        // code, but its `@Blocking` annotation lights up
+                        // `BlockingMethodInNonBlockingContext` inside the
+                        // suspend collector. `addLast` is the equivalent
+                        // primitive that's correctly typed as non-blocking.
+                        if (!isSynthetic) stoppedEvents.addLast(event)
                     }
                     else -> { /* irrelevant for this test */ }
                 }
@@ -168,7 +175,7 @@ class LldbDapMidSessionBreakpointIdeFlowIntegrationTest {
             val hit = withTimeout(BREAKPOINT_HIT_TIMEOUT) {
                 while (true) {
                     stoppedEvents.pollFirst()?.let { return@withTimeout it }
-                    delay(20)
+                    delay(20.milliseconds)
                 }
                 @Suppress("UNREACHABLE_CODE") error("unreachable")
             }

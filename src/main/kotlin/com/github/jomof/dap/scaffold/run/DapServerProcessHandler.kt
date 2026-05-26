@@ -2,7 +2,6 @@ package com.github.jomof.dap.scaffold.run
 
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.process.ProcessOutputType
-import com.intellij.openapi.util.Key
 import java.io.OutputStream
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.Executors
@@ -19,7 +18,6 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 class DapServerProcessHandler(
     private val process: Process,
-    private val commandLine: String,
     /**
      * How to materialise a [com.github.jomof.dap.client.DapTransport] for the
      * spawned adapter. Defaults to [DapTransportBlueprint.Stdio] for the
@@ -80,13 +78,4 @@ class DapServerProcessHandler(
 
     /** Direct access to the underlying [Process]; used by [ScaffoldDapDebugRunner]. */
     fun underlyingProcess(): Process = process
-
-    /** Description text shown in run-config UI. */
-    @Suppress("unused")
-    fun commandLineDescription(): String = commandLine
-
-    @Suppress("unused")
-    fun appendBanner(message: String, key: Key<*> = ProcessOutputType.SYSTEM) {
-        notifyTextAvailable(message, key)
-    }
 }

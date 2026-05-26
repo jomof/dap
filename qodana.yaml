@@ -1,0 +1,86 @@
+# Qodana configuration — runs IntelliJ inspections headlessly.
+# https://www.jetbrains.com/help/qodana/qodana-yaml.html
+#
+# Trigger locally with `./gradlew qodanaScan`; reports land under
+# `.qodana/` (gitignored). The first run downloads the linter Docker
+# image (~3 GB) and takes 3-5 minutes; subsequent runs reuse the
+# cached image and are typically 30-60 s.
+version: "1.0"
+
+# Free linter (Community licence) that supports Java + Kotlin + Groovy.
+# `qodana-jvm` (paid) adds spelling, license audit, and dependency
+# vulnerability checks, but the inspection coverage we care about is
+# identical between the two.
+linter: jetbrains/qodana-jvm-community:2026.1
+
+# Inspection profile:
+#   - `qodana.starter`     — most actionable subset, low noise.
+#   - `qodana.recommended` — broader, closer to IDEA's default
+#                            "Project Default" profile that's active
+#                            in the editor as you type.
+#
+# We extend `recommended` (via `profile.base.name`) and overlay
+# severity overrides for inspections the IDE shows inline but
+# `recommended` either disables or leaves at `INFORMATION` severity
+# (per the Qodana docs: "Inspections of the INFORMATION severity in
+# the IDE are also disabled" in qodana.recommended). Bumping the
+# severity here both re-enables them and makes `--fail-threshold 0`
+# treat them as build-failing problems.
+#
+# Inspection IDs come from the IntelliJ Kotlin plugin's inspection
+# registry; the canonical list is in the IDE under
+# Settings → Editor → Inspections (use "Copy Inspection ID" from the
+# context menu of any rule).
+#
+# https://www.jetbrains.com/help/qodana/inspection-profiles.html#Override+severity
+profile:
+  base:
+    name: qodana.recommended
+  inspections:
+    # `delay(123L)` / `withTimeout(123L)` etc. → `delay(123.milliseconds)`.
+    # IDE: "Legacy Long overload can be converted to Duration". In the
+    # "Performance" group, dropped by recommended.
+    - inspection: ConvertLongToDuration
+      enabled: true
+      severity: WARNING
+
+    # IDE: "Possibly blocking call in non-blocking context could lead
+    # to thread starvation".
+    #
+    # Per Inspectopedia (https://www.jetbrains.com/help/inspectopedia/
+    # BlockingMethodInNonBlockingContext.html) this inspection ONLY
+    # fires on methods explicitly annotated `@Blocking` (or one of the
+    # micronaut/smallrye equivalents). The IDE editor *also* applies
+    # JetBrains' bundled JDK external-annotation overlay that marks
+    # `java.util.concurrent.BlockingQueue.put`, `Thread.sleep`,
+    # `Files.*`, etc. as `@Blocking`. The Qodana JVM-Community 2026.1
+    # linter image ships a thinner overlay, so the headless scan
+    # WILL fire on first-party `@Blocking` methods in this codebase
+    # (verified 2026-05 with a deliberately-annotated canary that
+    # Qodana correctly flagged at High severity) but WILL NOT catch
+    # calls to unannotated JDK blocking methods like `BlockingDeque.put`
+    # — those remain editor-only warnings. Where the IDE flags a
+    # spurious JDK call in our code, prefer the unannotated equivalent
+    # (e.g. `addLast` instead of `put` on an unbounded `LinkedBlockingDeque`).
+    - inspection: BlockingMethodInNonBlockingContext
+      enabled: true
+      severity: WARNING
+      options:
+        myConsiderSuspendContextNonBlocking: true
+
+# Match the JDK we build against so inspections see resolved symbols.
+projectJDK: "21"
+
+# Exclude generated/build directories and test fixtures. Inspection
+# IDs aren't filtered globally — only the listed paths are skipped.
+exclude:
+  - name: All
+    paths:
+      - build
+      - .gradle
+      - .idea
+      - .intellijPlatform
+      - .qodana
+      - src/test/resources/fixtures
+
+bootstrap: ""

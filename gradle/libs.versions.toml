@@ -6,6 +6,11 @@ lsp4j = "0.24.0"
 # Gradle 9.5.0 + Kotlin 2.3.20 toolchain. 2.0.0-alpha.3 is built
 # against Kotlin 2.3.21 / Gradle 9.3.1 — the closest published match.
 detekt = "2.0.0-alpha.3"
+# Qodana 2026.1 runs the IntelliJ inspection engine headlessly via
+# Docker. Pinned to the major+minor that matches the Gradle plugin
+# release we apply; the Docker linter image tag is locked separately
+# in `qodana.yaml` for reproducibility.
+qodana = "2026.1.0"
 
 [libraries]
 junit = { module = "junit:junit", version.ref = "junit" }
@@ -19,3 +24,4 @@ detektFormatting = { module = "dev.detekt:detekt-rules-ktlint-wrapper", version.
 
 [plugins]
 detekt = { id = "dev.detekt", version.ref = "detekt" }
+qodana = { id = "org.jetbrains.qodana", version.ref = "qodana" }

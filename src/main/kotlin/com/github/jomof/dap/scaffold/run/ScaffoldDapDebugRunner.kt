@@ -91,17 +91,58 @@ class ScaffoldDapDebugRunner : AsyncProgramRunner<com.intellij.execution.configu
         return promise
     }
 
-    private fun startDebugSession(environment: ExecutionEnvironment, state: RunProfileState): RunContentDescriptor {
+    /**
+     * Shared preamble for [startDebugSession] and [startRunSession]:
+     * casts the [state] to our concrete type, runs the command-line
+     * state to obtain the process handler + console, opens the DAP
+     * client transport, and resolves the language profile + launch
+     * spec for the configured `noDebug` mode.
+     *
+     * Extracted so the duplicate-block detector stays quiet and the
+     * debug/run entry points keep their mode-specific concerns (XDebug
+     * starter wiring vs banner-suppressing output adapter) clearly
+     * visible at the top of each function.
+     */
+    private fun prepareSession(
+        environment: ExecutionEnvironment,
+        state: RunProfileState,
+        noDebug: Boolean,
+    ): PreparedSession {
         val commandLineState = state as ScaffoldDapCommandLineState
         val executionResult = commandLineState.execute(environment.executor, this)
         val processHandler = executionResult.processHandler as DapServerProcessHandler
         val console = executionResult.executionConsole as ConsoleView
-
         val client = connectAdapter(processHandler)
-
         val config = commandLineState.config()
-        val launchSpec = buildLaunchSpec(config, noDebug = false)
-        val profile = profileFor(config.profileId)
+        return PreparedSession(
+            executionResult = executionResult,
+            processHandler = processHandler,
+            console = console,
+            client = client,
+            config = config,
+            profile = profileFor(config.profileId),
+            launchSpec = buildLaunchSpec(config, noDebug = noDebug),
+        )
+    }
+
+    private data class PreparedSession(
+        val executionResult: com.intellij.execution.ExecutionResult,
+        val processHandler: DapServerProcessHandler,
+        val console: ConsoleView,
+        val client: DapClient,
+        val config: ScaffoldDapRunConfiguration,
+        val profile: DapLanguageProfile,
+        val launchSpec: DapLaunchSpec,
+    )
+
+    private fun startDebugSession(environment: ExecutionEnvironment, state: RunProfileState): RunContentDescriptor {
+        val prep = prepareSession(environment, state, noDebug = false)
+        val processHandler = prep.processHandler
+        val console = prep.console
+        val client = prep.client
+        val config = prep.config
+        val launchSpec = prep.launchSpec
+        val profile = prep.profile
         val breakpointTypes = breakpointTypesFor(config.profileId)
 
         val starter = object : XDebugProcessStarter() {
@@ -134,15 +175,14 @@ class ScaffoldDapDebugRunner : AsyncProgramRunner<com.intellij.execution.configu
      * handler to stop (so user-initiated Stop also tears the client down).
      */
     private fun startRunSession(environment: ExecutionEnvironment, state: RunProfileState): RunContentDescriptor {
-        val commandLineState = state as ScaffoldDapCommandLineState
-        val executionResult = commandLineState.execute(environment.executor, this)
-        val processHandler = executionResult.processHandler as DapServerProcessHandler
-        val console = executionResult.executionConsole as ConsoleView
-
-        val client = connectAdapter(processHandler)
-        val config = commandLineState.config()
-        val profile = profileFor(config.profileId)
-        val launchSpec = buildLaunchSpec(config, noDebug = true)
+        val prep = prepareSession(environment, state, noDebug = true)
+        val executionResult = prep.executionResult
+        val processHandler = prep.processHandler
+        val console = prep.console
+        val client = prep.client
+        val profile = prep.profile
+        val launchSpec = prep.launchSpec
+        val environmentName = environment.runProfile.name
         // Run mode has no debug-console tab, so suppress lldb-dap's banner
         // ("To get started with the debug console …", "Attached to process N",
         // "Process N exited with status = 0.") and keep only the program's
@@ -150,7 +190,7 @@ class ScaffoldDapDebugRunner : AsyncProgramRunner<com.intellij.execution.configu
         val outputAdapter = DapOutputAdapter(console, skipCategories = DapOutputAdapter.RUN_MODE_SKIP)
 
         val scope = CoroutineScope(
-            SupervisorJob() + Dispatchers.Default + CoroutineName("dap-run-${environment.runProfile.name}"),
+            SupervisorJob() + Dispatchers.Default + CoroutineName("dap-run-$environmentName"),
         )
 
         scope.launch {

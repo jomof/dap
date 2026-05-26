@@ -1,5 +1,7 @@
 package com.github.jomof.dap.reverse
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.eclipse.lsp4j.debug.RunInTerminalRequestArguments
 import org.eclipse.lsp4j.debug.RunInTerminalResponse
 
@@ -31,7 +33,10 @@ class ProcessBuilderRunInTerminalHandler : DapRunInTerminalHandler {
             if (value == null) builder.environment().remove(key) else builder.environment()[key] = value
         }
         builder.inheritIO()
-        val process = builder.start()
+        // ProcessBuilder.start() blocks (fork/exec syscalls) — move it
+        // off the caller's coroutine dispatcher to avoid starving the
+        // default dispatcher under load.
+        val process = withContext(Dispatchers.IO) { builder.start() }
         return RunInTerminalResponse().apply { processId = process.pid().toInt() }
     }
 }

@@ -1,3 +1,9 @@
+// XDropFrameHandler is @ApiStatus.Experimental — accepted: the IDE
+// toolbar drop-frame button is wired to this interface and there's no
+// stable replacement. Tracked in the IntelliJ Platform; revisit when
+// the API stabilises.
+@file:Suppress("UnstableApiUsage")
+
 package com.github.jomof.dap.stepping
 
 import com.github.jomof.dap.client.DapClient

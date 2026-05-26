@@ -191,10 +191,15 @@ class DapDebugProcess(
     override fun getSmartStepIntoHandler(): XSmartStepIntoHandler<*>? =
         if (capabilities?.supportsStepInTargetsRequest == true) smartStepInto else null
 
+    // XDropFrameHandler is @ApiStatus.Experimental in the IntelliJ
+    // Platform; accepted because there's no stable equivalent for
+    // wiring the toolbar drop-frame button to DAP `restartFrame`.
+    @Suppress("UnstableApiUsage")
     private val dropFrame: XDropFrameHandler by lazy {
         DapDropFrameHandler(client, sessionScope)
     }
 
+    @Suppress("UnstableApiUsage")
     override fun getDropFrameHandler(): XDropFrameHandler? =
         if (capabilities?.supportsRestartFrame == true) dropFrame else null
 
@@ -353,29 +358,14 @@ class DapDebugProcess(
         incoming.supportsConfigurationDoneRequest?.let {
             if (current.supportsConfigurationDoneRequest != it) { current.supportsConfigurationDoneRequest = it; changed = true }
         }
-        incoming.supportsFunctionBreakpoints?.let {
-            if (current.supportsFunctionBreakpoints != it) { current.supportsFunctionBreakpoints = it; changed = true }
-        }
         incoming.supportsConditionalBreakpoints?.let {
             if (current.supportsConditionalBreakpoints != it) { current.supportsConditionalBreakpoints = it; changed = true }
-        }
-        incoming.supportsHitConditionalBreakpoints?.let {
-            if (current.supportsHitConditionalBreakpoints != it) { current.supportsHitConditionalBreakpoints = it; changed = true }
         }
         incoming.supportsLogPoints?.let {
             if (current.supportsLogPoints != it) { current.supportsLogPoints = it; changed = true }
         }
-        incoming.supportsSetVariable?.let {
-            if (current.supportsSetVariable != it) { current.supportsSetVariable = it; changed = true }
-        }
-        incoming.supportsEvaluateForHovers?.let {
-            if (current.supportsEvaluateForHovers != it) { current.supportsEvaluateForHovers = it; changed = true }
-        }
         incoming.supportsTerminateRequest?.let {
             if (current.supportsTerminateRequest != it) { current.supportsTerminateRequest = it; changed = true }
-        }
-        incoming.supportsExceptionFilterOptions?.let {
-            if (current.supportsExceptionFilterOptions != it) { current.supportsExceptionFilterOptions = it; changed = true }
         }
         incoming.supportsStepInTargetsRequest?.let {
             if (current.supportsStepInTargetsRequest != it) { current.supportsStepInTargetsRequest = it; changed = true }

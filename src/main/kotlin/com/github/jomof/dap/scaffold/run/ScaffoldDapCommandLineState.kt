@@ -52,7 +52,7 @@ class ScaffoldDapCommandLineState(
         } catch (throwable: Throwable) {
             throw ExecutionException("Failed to start ${config.adapterKind}: ${throwable.message}", throwable)
         }
-        return DapServerProcessHandler(process, command.joinToString(" "), blueprint)
+        return DapServerProcessHandler(process, blueprint)
     }
 
     private fun resolveAdapterBinary(): Path {

@@ -17,6 +17,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -66,7 +67,7 @@ class DapSyntheticPauseGateTest {
         // pendingSyntheticPauses counter ticks up inside doPauseInstallResume,
         // immediately before the pause() call.
         withTimeout(TIMEOUT) {
-            while (gate.pendingSyntheticPauseCount() == 0) delay(2)
+            while (gate.pendingSyntheticPauseCount() == 0) delay(2.milliseconds)
         }
         // Fire the simulated stop with the canonical reason. The gate
         // should consume it.
@@ -106,7 +107,7 @@ class DapSyntheticPauseGateTest {
             gate.wrappedSetBreakpoints(buildArgs(line = 42))
         }
         withTimeout(TIMEOUT) {
-            while (gate.pendingSyntheticPauseCount() == 0) delay(2)
+            while (gate.pendingSyntheticPauseCount() == 0) delay(2.milliseconds)
         }
         gate.consumeIfSynthetic(reason = "pause", threadId = 3)
 
@@ -135,7 +136,7 @@ class DapSyntheticPauseGateTest {
             gate.wrappedSetBreakpoints(buildArgs(line = 42))
         }
         withTimeout(TIMEOUT) {
-            while (gate.pendingSyntheticPauseCount() == 0) delay(2)
+            while (gate.pendingSyntheticPauseCount() == 0) delay(2.milliseconds)
         }
         // Adapter would emit a stop with whatever thread id it picked;
         // the gate doesn't care which one we surface here.
@@ -161,7 +162,7 @@ class DapSyntheticPauseGateTest {
             gate.wrappedSetBreakpoints(buildArgs(line = 42))
         }
         withTimeout(TIMEOUT) {
-            while (gate.pendingSyntheticPauseCount() == 0) delay(2)
+            while (gate.pendingSyntheticPauseCount() == 0) delay(2.milliseconds)
         }
         gate.consumeIfSynthetic(reason = "pause", threadId = 13)
         withTimeout(TIMEOUT) { wrapper.await() }
@@ -207,7 +208,7 @@ class DapSyntheticPauseGateTest {
             gate.wrappedSetBreakpoints(buildArgs(line = 42))
         }
         withTimeout(TIMEOUT) {
-            while (gate.pendingSyntheticPauseCount() == 0) delay(2)
+            while (gate.pendingSyntheticPauseCount() == 0) delay(2.milliseconds)
         }
         // lldb-dap quirk: pause-induced stop arrives with reason="exception".
         val consumed = gate.consumeIfSynthetic(reason = "exception", threadId = 7)

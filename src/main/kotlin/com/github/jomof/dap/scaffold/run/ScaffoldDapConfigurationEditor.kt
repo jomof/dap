@@ -38,7 +38,7 @@ class ScaffoldDapConfigurationEditor : SettingsEditor<ScaffoldDapRunConfiguratio
     }
     private val envArea = JBTextArea(4, 40)
     private val launchJsonArea = JBTextArea(6, 40)
-    private val adapterBox: JComboBox<DapAdapterKind> = JComboBox(DapAdapterKind.values())
+    private val adapterBox: JComboBox<DapAdapterKind> = JComboBox(DapAdapterKind.entries.toTypedArray())
 
     override fun createEditor(): JComponent =
         FormBuilder.createFormBuilder()

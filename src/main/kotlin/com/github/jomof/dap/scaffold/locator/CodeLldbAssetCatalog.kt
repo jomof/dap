@@ -36,12 +36,6 @@ object CodeLldbAssetCatalog {
         }
     }
 
-    /** Convenience: ask the catalog about the currently-running JVM host. */
-    fun assetNameForHost(): String? = assetName(
-        System.getProperty("os.name") ?: "",
-        System.getProperty("os.arch") ?: "",
-    )
-
     /**
      * Relative path inside the extracted VSIX that points to the
      * adapter executable. Windows packs it as `.exe`; everywhere else

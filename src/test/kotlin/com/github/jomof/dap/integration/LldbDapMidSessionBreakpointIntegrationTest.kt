@@ -32,6 +32,7 @@ import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -98,7 +99,7 @@ class LldbDapMidSessionBreakpointIntegrationTest {
         // stopped event could arrive before a late subscriber sees it.
         val stoppedEvents = java.util.concurrent.LinkedBlockingDeque<DapEvent.Stopped>()
         val collector = launch(start = CoroutineStart.UNDISPATCHED) {
-            client.events.filterIsInstance<DapEvent.Stopped>().collect { stoppedEvents.put(it) }
+            client.events.filterIsInstance<DapEvent.Stopped>().collect { stoppedEvents.addLast(it) }
         }
 
         try {
@@ -192,7 +193,7 @@ class LldbDapMidSessionBreakpointIntegrationTest {
 
         val stoppedEvents = java.util.concurrent.LinkedBlockingDeque<DapEvent.Stopped>()
         val collector = launch(start = CoroutineStart.UNDISPATCHED) {
-            client.events.filterIsInstance<DapEvent.Stopped>().collect { stoppedEvents.put(it) }
+            client.events.filterIsInstance<DapEvent.Stopped>().collect { stoppedEvents.addLast(it) }
         }
 
         try {
@@ -263,7 +264,7 @@ class LldbDapMidSessionBreakpointIntegrationTest {
     private suspend fun takeNextStop(queue: java.util.concurrent.BlockingDeque<DapEvent.Stopped>): DapEvent.Stopped {
         while (true) {
             queue.pollFirst()?.let { return it }
-            delay(20)
+            delay(20.milliseconds)
         }
     }
 
@@ -312,7 +313,7 @@ class LldbDapMidSessionBreakpointIntegrationTest {
                     // production onStopped() does. Don't enqueue it.
                     return@collect
                 }
-                surfacedStops.put(event)
+                surfacedStops.addLast(event)
             }
         }
 
@@ -353,7 +354,7 @@ class LldbDapMidSessionBreakpointIntegrationTest {
                         client.pause(PauseArguments().apply { threadId = tid })
                         val deadline = System.currentTimeMillis() + 2_000
                         while (inferiorRunning.get() && System.currentTimeMillis() < deadline) {
-                            delay(5)
+                            delay(5.milliseconds)
                         }
                         try {
                             client.setBreakpoints(args)

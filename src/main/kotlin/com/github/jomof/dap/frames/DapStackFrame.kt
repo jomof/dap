@@ -50,7 +50,7 @@ class DapStackFrame(
     override fun getEvaluator(): XDebuggerEvaluator = evaluator
 
     override fun customizePresentation(component: ColoredTextContainer) {
-        component.append(raw.name ?: "<frame ${'$'}dapFrameId>", SimpleTextAttributes.REGULAR_ATTRIBUTES)
+        component.append(raw.name ?: "<frame $dapFrameId>", SimpleTextAttributes.REGULAR_ATTRIBUTES)
         val source = raw.source?.name
         if (source != null) {
             component.append("  ", SimpleTextAttributes.REGULAR_ATTRIBUTES)

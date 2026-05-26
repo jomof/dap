@@ -121,17 +121,6 @@ class DapBreakpointSync(
         scheduleFlush(file)
     }
 
-    /** Replays the entire mirror at session start (post-`initialized` event). */
-    @Synchronized
-    fun resyncAll() {
-        val files = state.keys.toList()
-        files.forEach { path ->
-            val anyBp = state[path]?.keys?.firstOrNull() ?: return@forEach
-            val virtualFile = anyBp.fileVirtualFile() ?: return@forEach
-            scheduleFlush(virtualFile)
-        }
-    }
-
     /**
      * Synchronously flushes every tracked file *now*, bypassing the debounce,
      * and suspends until each `setBreakpoints` round-trip has completed.
@@ -388,6 +377,6 @@ class DapBreakpointSync(
         }
 
         /** `{...}` with non-empty payload — the marker that this is a DAP-style template. */
-        private val TEMPLATE_PROBE = Regex("""\{[^{}]+\}""")
+        private val TEMPLATE_PROBE = Regex("""\{[^{}]+}""")
     }
 }

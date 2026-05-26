@@ -5,7 +5,6 @@ import com.github.jomof.dap.frames.DapStackFrame
 import com.github.jomof.dap.session.DapSessionScope
 import com.intellij.execution.ui.RunnerLayoutUi
 import com.intellij.icons.AllIcons
-import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.ActionToolbar
@@ -76,7 +75,7 @@ class DapDisassemblyTab(
         ).apply {
             isCloseable = false
         }
-        Disposer.register(content, Disposable { EditorFactory.getInstance().releaseEditor(editor) })
+        Disposer.register(content) { EditorFactory.getInstance().releaseEditor(editor) }
         ui.addContent(content)
         return content
     }

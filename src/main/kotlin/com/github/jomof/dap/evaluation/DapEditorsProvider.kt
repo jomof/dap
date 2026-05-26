@@ -56,6 +56,12 @@ class DapEditorsProvider(
      * permissive language. Logged at debug so this stays out of `idea.log`
      * for the normal path.
      */
+    // The parameter-name `/* … = */` comments below intentionally document
+    // the semantic meaning of the booleans rather than parroting the Java
+    // bytecode names (`p3`/`p4`, stripped because the IntelliJ Platform
+    // doesn't preserve parameter-name debug info in shipped JARs). The
+    // inspection that flags them as "inconsistent" is wrong for this case.
+    @Suppress("InconsistentCommentForJavaParameter")
     private fun tryCreatePsiFile(project: Project, language: Language, text: String): PsiFile? {
         val ext = language.associatedFileType?.defaultExtension ?: "txt"
         val fileName = "dap-evaluation.$ext"

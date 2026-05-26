@@ -33,7 +33,7 @@ object DapErrors {
      */
     private const val LSP4J_PLACEHOLDER = "Unset error message."
 
-    private val VARIABLE_PATTERN = Regex("""\{(\w+)\}""")
+    private val VARIABLE_PATTERN = Regex("""\{(\w+)}""")
 
     /**
      * @return the best human-readable description of [throwable], drawing

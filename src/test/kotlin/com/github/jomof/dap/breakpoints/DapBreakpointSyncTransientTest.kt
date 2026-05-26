@@ -14,6 +14,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Before
 import org.junit.Test
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -136,7 +137,7 @@ class DapBreakpointSyncTransientTest {
     private suspend fun pollForSetBreakpointsCount(expected: Int): SetBreakpointsArguments {
         withTimeout(TIMEOUT) {
             while (fixture.server.setBreakpointsCalls.get() < expected) {
-                kotlinx.coroutines.delay(10)
+                kotlinx.coroutines.delay(10.milliseconds)
             }
         }
         val args = fixture.server.lastSetBreakpoints.get()
@@ -150,7 +151,7 @@ class DapBreakpointSyncTransientTest {
                 val args = fixture.server.lastSetBreakpoints.get()
                 val lines = (args?.breakpoints ?: emptyArray()).map { it.line }
                 if (lines == expectedLines) return@withTimeout
-                kotlinx.coroutines.delay(10)
+                kotlinx.coroutines.delay(10.milliseconds)
             }
         }
         return fixture.server.lastSetBreakpoints.get()!!
