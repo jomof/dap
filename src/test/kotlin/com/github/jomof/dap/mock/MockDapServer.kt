@@ -7,6 +7,7 @@ import org.eclipse.lsp4j.debug.ContinueResponse
 import org.eclipse.lsp4j.debug.DisconnectArguments
 import org.eclipse.lsp4j.debug.EvaluateArguments
 import org.eclipse.lsp4j.debug.EvaluateResponse
+import org.eclipse.lsp4j.debug.ExceptionBreakpointsFilter
 import org.eclipse.lsp4j.debug.InitializeRequestArguments
 import org.eclipse.lsp4j.debug.NextArguments
 import org.eclipse.lsp4j.debug.PauseArguments
@@ -15,6 +16,8 @@ import org.eclipse.lsp4j.debug.ScopesArguments
 import org.eclipse.lsp4j.debug.ScopesResponse
 import org.eclipse.lsp4j.debug.SetBreakpointsArguments
 import org.eclipse.lsp4j.debug.SetBreakpointsResponse
+import org.eclipse.lsp4j.debug.SetExceptionBreakpointsArguments
+import org.eclipse.lsp4j.debug.SetExceptionBreakpointsResponse
 import org.eclipse.lsp4j.debug.Source
 import org.eclipse.lsp4j.debug.StackFrame
 import org.eclipse.lsp4j.debug.StackTraceArguments
@@ -32,6 +35,7 @@ import org.eclipse.lsp4j.debug.VariablesResponse
 import org.eclipse.lsp4j.debug.services.IDebugProtocolClient
 import org.eclipse.lsp4j.debug.services.IDebugProtocolServer
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 
@@ -64,7 +68,10 @@ class MockDapServer : IDebugProtocolServer {
     val stepInCalls = AtomicInteger(0)
     val stepOutCalls = AtomicInteger(0)
     val setBreakpointsCalls = AtomicInteger(0)
+    val setExceptionBreakpointsCalls = AtomicInteger(0)
     val lastSetBreakpoints = AtomicReference<SetBreakpointsArguments?>()
+    val lastSetExceptionBreakpoints = AtomicReference<SetExceptionBreakpointsArguments?>()
+    val callLog = CopyOnWriteArrayList<String>()
 
     /** Scripted threads, frames, scopes, variables. Mutated by [scriptStop]. */
     private var scriptedThreads: List<Thread> = listOf(Thread().apply { id = 1; name = "main" })
@@ -126,12 +133,14 @@ class MockDapServer : IDebugProtocolServer {
 
     override fun configurationDone(args: ConfigurationDoneArguments): CompletableFuture<Void> {
         configurationDoneCalls.incrementAndGet()
+        callLog += "configurationDone"
         return CompletableFuture.completedFuture(null)
     }
 
     override fun setBreakpoints(args: SetBreakpointsArguments): CompletableFuture<SetBreakpointsResponse> {
         setBreakpointsCalls.incrementAndGet()
         lastSetBreakpoints.set(args)
+        callLog += "setBreakpoints"
         val response = SetBreakpointsResponse().apply {
             breakpoints = (args.breakpoints ?: emptyArray()).mapIndexed { index, src ->
                 org.eclipse.lsp4j.debug.Breakpoint().apply {
@@ -142,6 +151,15 @@ class MockDapServer : IDebugProtocolServer {
             }.toTypedArray()
         }
         return CompletableFuture.completedFuture(response)
+    }
+
+    override fun setExceptionBreakpoints(
+        args: SetExceptionBreakpointsArguments,
+    ): CompletableFuture<SetExceptionBreakpointsResponse> {
+        setExceptionBreakpointsCalls.incrementAndGet()
+        lastSetExceptionBreakpoints.set(args)
+        callLog += "setExceptionBreakpoints"
+        return CompletableFuture.completedFuture(SetExceptionBreakpointsResponse())
     }
 
     override fun threads(): CompletableFuture<ThreadsResponse> {
@@ -221,7 +239,19 @@ class MockDapServer : IDebugProtocolServer {
         supportsLogPoints = true
         supportsHitConditionalBreakpoints = true
         supportsTerminateRequest = true
+        exceptionBreakpointFilters = arrayOf(
+            exceptionFilter("cpp_throw"),
+            exceptionFilter("rust_panic"),
+            exceptionFilter("panic"),
+            exceptionFilter("fatalError"),
+        )
     }
+
+    private fun exceptionFilter(filterId: String): ExceptionBreakpointsFilter =
+        ExceptionBreakpointsFilter().apply {
+            filter = filterId
+            label = filterId
+        }
 
     companion object {
         fun frame(id: Int, name: String, source: Source?, line: Int): StackFrame =
