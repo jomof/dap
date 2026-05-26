@@ -4,10 +4,14 @@ import com.github.jomof.dap.client.DapClient
 import com.github.jomof.dap.client.DapEvent
 import com.github.jomof.dap.client.DapTransport
 import com.github.jomof.dap.scaffold.locator.LldbDapLocator
-import kotlinx.coroutines.*
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.future.await
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.eclipse.lsp4j.debug.InitializeRequestArguments
 import org.junit.After
 import org.junit.Assert.assertTrue

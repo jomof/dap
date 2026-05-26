@@ -7,7 +7,6 @@ import com.github.jomof.dap.client.DapTransport
 import com.github.jomof.dap.scaffold.locator.LldbDapLocator
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking

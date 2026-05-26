@@ -55,7 +55,11 @@ class DapExecutionStack(
                 // [DapStackFrame.getSourcePosition] call later sees populated cache entries.
                 coroutineScope {
                     rawFrames
-                        .mapNotNull { f -> f.source?.sourceReference?.takeIf { it > 0 }?.let { ref -> Triple(ref, f.source.path, f.source.name) } }
+                        .mapNotNull { f ->
+                            val src = f.source ?: return@mapNotNull null
+                            val ref = src.sourceReference?.takeIf { it > 0 } ?: return@mapNotNull null
+                            Triple(ref, src.path, src.name)
+                        }
                         .map { (ref, path, name) -> async { sourceReferenceCache?.await(ref, path, name) } }
                         .awaitAll()
                 }

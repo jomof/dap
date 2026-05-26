@@ -73,7 +73,7 @@ class DapValue(
             } catch (ce: CancellationException) {
                 throw ce
             } catch (throwable: Throwable) {
-                log.warn("Failed to fetch DAP variables for '${name}'", throwable)
+                log.warn("Failed to fetch DAP variables for '$name'", throwable)
                 val userMessage = DapErrors.toUserMessage(throwable)
                 ApplicationManager.getApplication().invokeLater {
                     node.setErrorMessage(userMessage)
@@ -112,7 +112,7 @@ class DapValue(
                 } catch (ce: CancellationException) {
                     throw ce
                 } catch (throwable: Throwable) {
-                    log.warn("setVariable failed for '${name}'", throwable)
+                    log.warn("setVariable failed for '$name'", throwable)
                     val userMessage = DapErrors.toUserMessage(throwable)
                     ApplicationManager.getApplication().invokeLater {
                         callback.errorOccurred(userMessage)

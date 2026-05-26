@@ -8,11 +8,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.future.future
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.future.await
+import kotlinx.coroutines.future.future
 import org.eclipse.lsp4j.debug.BreakpointEventArguments
 import org.eclipse.lsp4j.debug.CapabilitiesEventArguments
 import org.eclipse.lsp4j.debug.ConfigurationDoneArguments
@@ -32,9 +32,9 @@ import org.eclipse.lsp4j.debug.MemoryEventArguments
 import org.eclipse.lsp4j.debug.ModuleEventArguments
 import org.eclipse.lsp4j.debug.NextArguments
 import org.eclipse.lsp4j.debug.OutputEventArguments
-import org.eclipse.lsp4j.debug.RestartFrameArguments
 import org.eclipse.lsp4j.debug.PauseArguments
 import org.eclipse.lsp4j.debug.ProcessEventArguments
+import org.eclipse.lsp4j.debug.RestartFrameArguments
 import org.eclipse.lsp4j.debug.RunInTerminalRequestArguments
 import org.eclipse.lsp4j.debug.RunInTerminalResponse
 import org.eclipse.lsp4j.debug.ScopesArguments
@@ -128,6 +128,7 @@ class DapClient(
     }
 
     @Volatile private var server: IDebugProtocolServer? = null
+
     @Volatile private var listenerFuture: JFuture<Void>? = null
     private val disposed = AtomicBoolean(false)
 

@@ -1,8 +1,21 @@
 [versions]
 junit = "4.13.2"
 lsp4j = "0.24.0"
+# Detekt 2.0-alpha is required because the stable 1.23.x line is built
+# against Kotlin 2.0.21 / Gradle 8.x and is incompatible with our
+# Gradle 9.5.0 + Kotlin 2.3.20 toolchain. 2.0.0-alpha.3 is built
+# against Kotlin 2.3.21 / Gradle 9.3.1 — the closest published match.
+detekt = "2.0.0-alpha.3"
 
 [libraries]
 junit = { module = "junit:junit", version.ref = "junit" }
 lsp4jDebug = { module = "org.eclipse.lsp4j:org.eclipse.lsp4j.debug", version.ref = "lsp4j" }
 lsp4jJsonrpcDebug = { module = "org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc.debug", version.ref = "lsp4j" }
+# ktlint rules repackaged as detekt rules — provides import
+# ordering, trailing whitespace, brace placement, etc., that
+# detekt's bundled ruleset doesn't cover. In detekt 2.0 this was
+# renamed from `detekt-formatting` to `detekt-rules-ktlint-wrapper`.
+detektFormatting = { module = "dev.detekt:detekt-rules-ktlint-wrapper", version.ref = "detekt" }
+
+[plugins]
+detekt = { id = "dev.detekt", version.ref = "detekt" }

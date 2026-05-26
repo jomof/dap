@@ -70,7 +70,6 @@ class LldbDapPauseResumeIntegrationTest {
             client.events.filterIsInstance<DapEvent.Stopped>().collect { stoppedEvents.put(it) }
         }
         try {
-
             // ---- handshake ----
             withTimeout(HANDSHAKE_TIMEOUT) {
                 client.initialize(InitializeRequestArguments().apply {
@@ -149,11 +148,6 @@ class LldbDapPauseResumeIntegrationTest {
         }
     }
 
-    /**
-     * lldb-dap emits an initial `stopped` event (reason = `entry` or similar)
-     * right after launch on macOS. Drain anything that arrives in the first
-     * ~250ms before we start counting events for the test proper.
-     */
     /**
      * Pull the next stopped event from [queue] without blocking the calling
      * coroutine's thread. Polled with a short delay so we can be wrapped in

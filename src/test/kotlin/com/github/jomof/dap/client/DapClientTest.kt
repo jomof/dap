@@ -30,6 +30,7 @@ class DapClientTest {
     private lateinit var fixture: MockDapFixture
 
     @Before fun setUp() { fixture = MockDapFixture() }
+
     @After fun tearDown() { fixture.close() }
 
     @Test

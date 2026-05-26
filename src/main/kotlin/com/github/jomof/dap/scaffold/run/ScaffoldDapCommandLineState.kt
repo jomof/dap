@@ -4,17 +4,17 @@ import com.github.jomof.dap.scaffold.locator.AdapterUnavailableException
 import com.github.jomof.dap.scaffold.locator.CodeLldbAdapterProvisioner
 import com.github.jomof.dap.scaffold.locator.DelveDapLocator
 import com.github.jomof.dap.scaffold.locator.LldbDapAdapterProvisioner
+import com.intellij.execution.DefaultExecutionResult
 import com.intellij.execution.ExecutionException
 import com.intellij.execution.ExecutionResult
-import com.intellij.execution.DefaultExecutionResult
+import com.intellij.execution.Executor
 import com.intellij.execution.configurations.CommandLineState
 import com.intellij.execution.filters.TextConsoleBuilderFactory
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.runners.ExecutionEnvironment
+import com.intellij.execution.runners.ProgramRunner
 import com.intellij.execution.ui.ConsoleView
 import com.intellij.execution.ui.ConsoleViewContentType
-import com.intellij.execution.Executor
-import com.intellij.execution.runners.ProgramRunner
 import java.nio.file.Files
 import java.nio.file.Path
 

@@ -35,6 +35,7 @@ class ScaffoldDapRunConfiguration(
     var programArgs: String = ""
     var workingDir: String = project.basePath.orEmpty()
     var environment: Map<String, String> = emptyMap()
+
     /** Free-form JSON merged into the DAP `launch` request; overrides defaults. */
     var launchJsonOverrides: String = ""
 

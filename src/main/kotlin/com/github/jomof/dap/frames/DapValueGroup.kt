@@ -62,7 +62,7 @@ class DapValueGroup(
             } catch (ce: CancellationException) {
                 throw ce
             } catch (throwable: Throwable) {
-                log.warn("Failed to fetch DAP variables for scope '${name}'", throwable)
+                log.warn("Failed to fetch DAP variables for scope '$name'", throwable)
                 val userMessage = DapErrors.toUserMessage(throwable)
                 ApplicationManager.getApplication().invokeLater {
                     node.setErrorMessage(userMessage)

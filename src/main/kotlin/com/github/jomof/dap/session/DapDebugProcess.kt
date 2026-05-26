@@ -23,8 +23,6 @@ import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.ui.ConsoleView
 import com.intellij.execution.ui.ExecutionConsole
 import com.intellij.execution.ui.RunnerLayoutUi
-import com.intellij.xdebugger.stepping.XSmartStepIntoHandler
-import com.intellij.xdebugger.ui.XDebugTabLayouter
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.xdebugger.XDebugProcess
@@ -36,6 +34,8 @@ import com.intellij.xdebugger.breakpoints.XLineBreakpointType
 import com.intellij.xdebugger.evaluation.XDebuggerEditorsProvider
 import com.intellij.xdebugger.frame.XDropFrameHandler
 import com.intellij.xdebugger.frame.XSuspendContext
+import com.intellij.xdebugger.stepping.XSmartStepIntoHandler
+import com.intellij.xdebugger.ui.XDebugTabLayouter
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.future.await
@@ -161,6 +161,7 @@ class DapDebugProcess(
     }
 
     @Volatile private var capabilities: DapCapabilities? = null
+
     @Volatile private var initializedEventReceived = false
 
     /**
@@ -243,7 +244,12 @@ class DapDebugProcess(
                 log.info("start(): sending initialize for profile=${profile.id} launchSpec=${launchSpec::class.simpleName}")
                 val capabilities = client.initialize(buildInitializeArgs())
                 this@DapDebugProcess.capabilities = capabilities
-                log.info("start(): initialize OK — confDone=${capabilities.supportsConfigurationDoneRequest} cond=${capabilities.supportsConditionalBreakpoints} logPts=${capabilities.supportsLogPoints}")
+                log.info(
+                    "start(): initialize OK — " +
+                        "confDone=${capabilities.supportsConfigurationDoneRequest} " +
+                        "cond=${capabilities.supportsConditionalBreakpoints} " +
+                        "logPts=${capabilities.supportsLogPoints}",
+                )
                 // Don't block on the launch/attach response yet: lldb-dap (and most
                 // spec-conformant adapters) defer it until AFTER configurationDone,
                 // so awaiting here would deadlock the whole handshake.

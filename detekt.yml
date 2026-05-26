@@ -1,0 +1,256 @@
+# Project overrides on top of detekt's bundled default ruleset
+# (detekt 2.0.0-alpha.3 schema — note: property names differ from 1.x).
+# Anything not listed here inherits the default; we only override
+# rules whose defaults are a poor fit for an IntelliJ plugin codebase.
+#
+# Reference: https://detekt.dev/docs/rules/
+
+# DAP / DAP-adjacent code is full of legitimately-large message-handler
+# functions (event dispatchers, JSON-RPC routers) and integration tests
+# that drive real adapters. The default thresholds flag these as
+# "complex" even though the alternative (splitting into many tiny
+# private helpers) would actively harm readability. Loosen the bars.
+complexity:
+  LongMethod:
+    allowedLines: 120
+  LongParameterList:
+    allowedFunctionParameters: 8
+    allowedConstructorParameters: 8
+  TooManyFunctions:
+    # DapClient is a generated-ish facade over every DAP message type;
+    # one Kotlin function per DAP request is the natural shape. Bump
+    # to 60 to give headroom as the protocol surface grows.
+    allowedFunctionsPerClass: 60
+    allowedFunctionsPerObject: 30
+    allowedFunctionsPerInterface: 20
+    allowedFunctionsPerFile: 60
+  CyclomaticComplexMethod:
+    # `DapDebugProcess.onCapabilitiesUpdate` is a flat dispatcher over
+    # ~30 capability flags; splitting it would obscure the 1-to-1
+    # mapping. 35 absorbs that and similar dispatchers.
+    allowedComplexity: 35
+  NestedBlockDepth:
+    allowedDepth: 6
+
+# Integration tests legitimately throw raw `Exception` to signal
+# adapter-protocol violations; UI code catches `Throwable` to keep
+# the IDE alive across third-party plugin failures.
+exceptions:
+  TooGenericExceptionCaught:
+    active: false
+  TooGenericExceptionThrown:
+    active: false
+  SwallowedException:
+    active: false
+  InstanceOfCheckForException:
+    active: false
+
+# Style rules that produce more noise than signal in this codebase.
+style:
+  # DAP message IDs, ports, timeouts, byte sizes — most "magic"
+  # numbers here are protocol constants documented at the call site.
+  MagicNumber:
+    active: false
+  ReturnCount:
+    max: 6
+  # Validation/resolver functions (`resolveAdapterBinary`, etc.)
+  # legitimately throw on each unmet precondition; chaining via a
+  # single throw + sealed-result would hurt readability.
+  ThrowsCount:
+    max: 5
+  MaxLineLength:
+    maxLineLength: 140
+  WildcardImport:
+    active: false
+  # Hand-rolled minimal-dependency JSON / brace parsers use multiple
+  # `break/continue` statements for early-exit; the alternative is a
+  # state machine that's strictly less readable for the use case.
+  LoopWithTooManyJumpStatements:
+    active: false
+  # The whole reason we're wiring up detekt.
+  UnusedImport:
+    active: true
+  UnusedPrivateProperty:
+    active: true
+  UnusedPrivateFunction:
+    active: true
+  UnusedPrivateClass:
+    active: true
+  UnusedVariable:
+    active: true
+  UnusedParameter:
+    active: true
+  DataClassContainsFunctions:
+    active: false
+  # `TODO(...)` is fine in a project this young.
+  ForbiddenComment:
+    active: false
+  # Mock helpers in tests legitimately return constant stubs.
+  FunctionOnlyReturningConstant:
+    excludes:
+      - '**/test/**'
+      - '**/mock/**'
+
+# Test fakes implement large platform interfaces (`ConsoleView`,
+# `Process`, …) where most methods must exist but do nothing. The
+# empty bodies are documentation of "intentionally a no-op" — far
+# clearer than `Unit.also { }` or similar workarounds.
+empty-blocks:
+  EmptyFunctionBlock:
+    excludes:
+      - '**/test/**'
+
+# ──────────────────────────────────────────────────────────────────
+# ktlint-wrapper rules (detekt-rules-ktlint-wrapper).
+#
+# The default ktlint ruleset is *extremely* opinionated about layout
+# (every argument on its own line, blank line between every when
+# branch, KDoc not allowed inside class bodies, etc.) — opinions that
+# IntelliJ's default inspections do NOT enforce. Importing the whole
+# ruleset would mean ~300 findings that don't match anything the user
+# would see in the IDE.
+#
+# So we explicitly opt-in to the formatting rules whose verdicts
+# overlap with IntelliJ's default Kotlin inspections, and disable the
+# rest. New rules added by future detekt/ktlint upgrades default to
+# `active: true`; if any of them turn out to be ktlint-only opinions
+# we'll disable them here.
+# ──────────────────────────────────────────────────────────────────
+ktlint:
+  active: true
+  autoCorrect: false
+  android: false
+
+  # Rules KEPT (overlap with IDEA default inspections):
+  NoWildcardImports:
+    active: true
+  NoUnusedImports:
+    active: true
+  NoEmptyFirstLineInMethodBlock:
+    active: true
+  NoLineBreakAfterElse:
+    active: true
+  NoLineBreakBeforeAssignment:
+    active: true
+  NoSemicolons:
+    active: true
+  NoTrailingSpaces:
+    active: true
+  NoBlankLineBeforeRbrace:
+    active: true
+  NoConsecutiveBlankLines:
+    active: true
+  NoMultipleSpaces:
+    active: true
+  SpacingBetweenDeclarationsWithComments:
+    active: true
+  SpacingBetweenDeclarationsWithAnnotations:
+    active: true
+
+  # Rules DISABLED (pure ktlint layout opinions, not IDEA defaults):
+  ArgumentListWrapping:
+    active: false
+  Wrapping:
+    active: false
+  StatementWrapping:
+    active: false
+  ClassSignature:
+    active: false
+  FunctionSignature:
+    active: false
+  ParameterListWrapping:
+    active: false
+  ParameterListSpacing:
+    active: false
+  PropertyWrapping:
+    active: false
+  ContextReceiverWrapping:
+    active: false
+  EnumWrapping:
+    active: false
+  EnumEntryNameCase:
+    active: false
+  BlankLineBetweenWhenConditions:
+    active: false
+  AnnotationOnSeparateLine:
+    active: false
+  AnnotationSpacing:
+    active: false
+  MultiLineIfElse:
+    active: false
+  Kdoc:
+    active: false
+  KdocWrapping:
+    active: false
+  TrailingCommaOnCallSite:
+    active: false
+  TrailingCommaOnDeclarationSite:
+    active: false
+  ChainWrapping:
+    active: false
+  ChainMethodContinuation:
+    active: false
+  Indentation:
+    # ktlint's indentation enforcer fights legitimate vertical
+    # alignment in DSL-style builders (test fixtures, JSON literals).
+    active: false
+  CommentWrapping:
+    active: false
+  ConditionWrapping:
+    active: false
+  ContextReceiverListWrapping:
+    active: false
+  ExpressionOperandWrapping:
+    active: false
+  IfElseBracing:
+    active: false
+  IfElseWrapping:
+    active: false
+  TryCatchFinallySpacing:
+    active: false
+  TypeParameterListSpacing:
+    active: false
+  TypeParameterCommentSpacing:
+    active: false
+  TypeArgumentListSpacing:
+    active: false
+  TypeArgumentCommentSpacing:
+    active: false
+  FunctionReturnTypeSpacing:
+    active: false
+  FunctionStartOfBodySpacing:
+    active: false
+  FunctionTypeReferenceSpacing:
+    active: false
+  FunctionLiteral:
+    active: false
+  FunctionExpressionBody:
+    active: false
+  ValueArgumentComment:
+    active: false
+  ValueParameterComment:
+    active: false
+  CommentSpacing:
+    active: false
+  ParameterWrapping:
+    active: false
+  BinaryExpressionWrapping:
+    # Has its own line-length opinion that conflicts with our
+    # `MaxLineLength: 140` setting. Disable to defer to the
+    # project-wide line-length policy.
+    active: false
+  PropertyName:
+    # Conflicts with our own naming overrides.
+    active: false
+  BackingPropertyNaming:
+    active: false
+
+  ImportOrdering:
+    # IDEA's default is "no empty lines between import groups";
+    # ktlint's default ordering matches the IDEA preset.
+    active: true
+
+  MaximumLineLength:
+    active: true
+    # Match the project-wide MaxLineLength in `style:` above.
+    maxLineLength: 140
