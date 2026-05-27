@@ -102,6 +102,7 @@ class LldbDapMidSessionBreakpointIdeFlowIntegrationTest {
                         val isSynthetic = gate.consumeIfSynthetic(
                             event.payload.reason,
                             event.payload.threadId,
+                            event.payload.hitBreakpointIds?.toList(),
                         )
                         // Trace EVERY stop with its full classification so a
                         // failure reproduces with enough info to triage.

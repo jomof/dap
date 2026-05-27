@@ -397,14 +397,13 @@ class DapDebugProcess(
         // was the synthetic one we issued to install a mid-session
         // breakpoint (in which case the IDE UI must NOT see it).
         //
-        // Verified against lldb-dap source (EventHelper.cpp:234,
-        // ProtocolEvents.cpp:80): a real pause request always reports
-        // reason="pause"; real breakpoint hits never do. So gating
-        // consumption on the reason closes the race where a real
-        // breakpoint fires between our pause() and the stop event.
+        // If the adapter reports concrete hit breakpoint ids, the gate
+        // must not swallow the event: it is a real user-visible stop even
+        // if it races with our synthetic pause request.
         val isSynthetic = syntheticPauseGate.consumeIfSynthetic(
             event.payload.reason,
             event.payload.threadId,
+            event.payload.hitBreakpointIds?.toList(),
         )
 
         // Run-to-cursor (and any other transient) gets unarmed here so the

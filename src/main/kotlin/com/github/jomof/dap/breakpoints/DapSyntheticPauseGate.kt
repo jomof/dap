@@ -157,16 +157,24 @@ class DapSyntheticPauseGate(
      * a chance to fire. Symptom: "I added a breakpoint mid-session
      * and the IDE stopped on a different line."
      *
-     * Trade-off: a real breakpoint / exception / signal that happens
-     * to fire in the ~10ms window between our `pause()` and the
-     * resulting stop event WILL be swallowed. We accept that risk —
-     * the alternative is mid-session breakpoints being unconditionally
-     * broken. Detection heuristics for the corner case can be added
-     * later if it turns out to bite in practice.
+     * A stopped event that explicitly reports [hitBreakpointIds] is a
+     * real breakpoint stop, not a pause acknowledgement. Let it reach
+     * the IDE and leave the inferior stopped.
      */
-    fun consumeIfSynthetic(reason: String?, threadId: Int?): Boolean {
+    fun consumeIfSynthetic(
+        reason: String?,
+        threadId: Int?,
+        hitBreakpointIds: List<Int>? = null,
+    ): Boolean {
         inferiorRunning = false
         if (threadId != null) lastKnownThreadId = threadId
+        if (!hitBreakpointIds.isNullOrEmpty()) {
+            log.debug(
+                "consumeIfSynthetic: preserving real breakpoint stop " +
+                    "(reason=$reason threadId=$threadId hitBreakpointIds=$hitBreakpointIds)",
+            )
+            return false
+        }
         while (true) {
             val current = pendingSyntheticPauses.get()
             if (current <= 0) return false
