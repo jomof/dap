@@ -30,7 +30,6 @@ object CodeLldbAdapterProvisioner : DapAdapterProvisioner {
     override fun resolve(): Path? {
         envOverride()?.let { return it }
         downloaderCache()?.let { return it }
-        lsp4ijCache()?.let { return it }
         vscodeExtensionCache()?.let { return it }
         return searchPath(BINARY_NAME)
     }
@@ -82,17 +81,7 @@ object CodeLldbAdapterProvisioner : DapAdapterProvisioner {
 
     private fun downloaderCache(): Path? = CodeLldbDownloader.existingInstall()
 
-    /**
-     * `~/.lsp4ij/dap/codelldb/extension/adapter/codelldb`. We don't write
-     * here — but if the user already has lsp4ij installed, reusing its
-     * download avoids a second copy.
-     */
-    private fun lsp4ijCache(): Path? {
-        val root = Paths.get(System.getProperty("user.home"), ".lsp4ij", "dap", "codelldb")
-        if (!Files.isDirectory(root)) return null
-        val candidate = root.resolve(CodeLldbAssetCatalog.adapterPath(System.getProperty("os.name") ?: ""))
-        return if (Files.isExecutable(candidate)) candidate else null
-    }
+
 
     /**
      * `~/.vscode/extensions/vadimcn.vscode-lldb-<version>/adapter/codelldb`

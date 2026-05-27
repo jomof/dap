@@ -67,7 +67,8 @@ open class CodeLldbDownloaderImpl(
             )
         val target = cacheRoot.resolve(release.tagName)
         downloadAndExtract(asset0.downloadUrl, target)
-        return adapterBinary(target).also { markExecutable(it) }
+        markExecutables(target)
+        return adapterBinary(target)
     }
 
     /**
@@ -196,8 +197,16 @@ open class CodeLldbDownloaderImpl(
         }
     }
 
-    private fun markExecutable(path: Path) {
-        runCatching { path.toFile().setExecutable(true) }
+    private fun markExecutables(targetDir: Path) {
+        Files.walk(targetDir).use { stream ->
+            stream.filter { Files.isRegularFile(it) }
+                .forEach { file ->
+                    val pathStr = file.toString().replace('\\', '/')
+                    if (pathStr.contains("/adapter/") || pathStr.contains("/lldb/bin/") || pathStr.contains("/lldb/lib/") || pathStr.contains("/bin/")) {
+                        runCatching { file.toFile().setExecutable(true) }
+                    }
+                }
+        }
     }
 
     companion object {
@@ -212,12 +221,12 @@ open class CodeLldbDownloaderImpl(
         private const val SAFE_ENTRY_PREFIX = "extension/"
 
         /**
-         * Default cache root: `~/.cache/dap-intellij/codelldb`. Chosen
+         * Default cache root: `~/.cache/dapij/codelldb`. Chosen
          * to avoid stepping on `~/.lsp4ij/dap/codelldb` (which lsp4ij
          * manages) while remaining stable across runs.
          */
         fun defaultCacheRoot(): Path =
-            Path.of(System.getProperty("user.home"), ".cache", "dap-intellij", "codelldb")
+            Path.of(System.getProperty("user.home"), ".cache", "dapij", "codelldb")
 
         // Minimal JSON walker. We only need to pull a few fields out of
         // a single object; a full parser dependency would be overkill.
