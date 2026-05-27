@@ -202,16 +202,20 @@ open class CodeLldbDownloaderImpl(
             stream.filter { Files.isRegularFile(it) }
                 .forEach { file ->
                     val pathStr = file.toString().replace('\\', '/')
-                    if (pathStr.contains("/adapter/") || pathStr.contains("/lldb/bin/") || pathStr.contains("/lldb/lib/") || pathStr.contains("/bin/")) {
+                    if (shouldMarkExecutable(pathStr)) {
                         runCatching { file.toFile().setExecutable(true) }
                     }
                 }
         }
     }
 
+    private fun shouldMarkExecutable(pathStr: String): Boolean =
+        EXECUTABLE_PATH_MARKERS.any { marker -> marker in pathStr }
+
     companion object {
         private const val RELEASES_LATEST_URL =
             "https://api.github.com/repos/vadimcn/codelldb/releases/latest"
+        private val EXECUTABLE_PATH_MARKERS = listOf("/adapter/", "/lldb/bin/", "/lldb/lib/", "/bin/")
 
         /**
          * Only entries under this prefix are extracted. VSIX files
