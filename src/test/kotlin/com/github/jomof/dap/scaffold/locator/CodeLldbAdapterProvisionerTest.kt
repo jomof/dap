@@ -19,6 +19,21 @@ class CodeLldbAdapterProvisionerTest {
 
     @get:Rule val tmp = TemporaryFolder()
 
+    @Test fun `lsp4ijCache reuses existing adapter from lsp4ij download`() {
+        val home = tmp.newFolder("home").toPath()
+        val adapter = createFile(
+            home
+                .resolve(".lsp4ij/dap/codelldb")
+                .resolve(CodeLldbAssetCatalog.adapterPath(System.getProperty("os.name") ?: "")),
+        )
+        adapter.toFile().setExecutable(true)
+
+        assertEquals(
+            adapter.toAbsolutePath(),
+            CodeLldbAdapterProvisioner.lsp4ijCache(home)?.toAbsolutePath(),
+        )
+    }
+
     @Test fun `liblldbFor finds dylib next to adapter in lsp4ij-style layout`() {
         val root = tmp.newFolder("install").toPath()
         val adapter = createFile(root.resolve("extension/adapter/codelldb"))
