@@ -80,7 +80,7 @@ open class CodeLldbDownloaderImpl(
         val root = cacheRoot.toFile()
         if (!root.isDirectory) return null
         return root.listFiles { f -> f.isDirectory }
-            ?.sortedByDescending { it.name } // pick highest tag wins lexically (v1.12.0 < v1.12.10)
+            ?.sortedWith { f1, f2 -> compareSemVer(f2.name, f1.name) }
             ?.firstNotNullOfOrNull { dir ->
                 val candidate = adapterBinary(dir.toPath())
                 if (Files.isExecutable(candidate)) candidate else null
@@ -281,6 +281,18 @@ open class CodeLldbDownloaderImpl(
                 }
             }
             return -1
+        }
+
+        internal fun compareSemVer(v1: String, v2: String): Int {
+            val clean1 = v1.removePrefix("v").split('.')
+            val clean2 = v2.removePrefix("v").split('.')
+            for (i in 0 until minOf(clean1.size, clean2.size)) {
+                val num1 = clean1[i].toIntOrNull() ?: 0
+                val num2 = clean2[i].toIntOrNull() ?: 0
+                val comp = num1.compareTo(num2)
+                if (comp != 0) return comp
+            }
+            return clean1.size.compareTo(clean2.size)
         }
     }
 }

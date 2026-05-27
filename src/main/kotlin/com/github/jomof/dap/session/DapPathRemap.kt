@@ -44,8 +44,12 @@ data class DapPathRemap(
         return if (isWindows) withForwardSlashes.lowercase() else withForwardSlashes
     }
 
-    private fun matchesPrefix(haystack: String, needle: String): Boolean =
-        haystack.startsWith(needle)
+    private fun matchesPrefix(haystack: String, needle: String): Boolean {
+        if (!haystack.startsWith(needle)) return false
+        if (haystack.length == needle.length) return true
+        if (needle.endsWith('/')) return true
+        return haystack[needle.length] == '/'
+    }
 
     companion object {
         val EMPTY: DapPathRemap = DapPathRemap(emptyList())

@@ -167,15 +167,14 @@ class DapSyntheticPauseGate(
     fun consumeIfSynthetic(reason: String?, threadId: Int?): Boolean {
         inferiorRunning = false
         if (threadId != null) lastKnownThreadId = threadId
-        if (pendingSyntheticPauses.get() <= 0) return false
-        // Decrement only if still positive — preserves invariant.
-        val newValue = pendingSyntheticPauses.decrementAndGet()
-        // `reason` is logged so adapter-quirk reports can be triaged
-        // without re-instrumenting; functionally we ignore it.
-        if (newValue >= 0) {
-            log.debug("consumeIfSynthetic: swallowed synthetic-pause stop (reason=$reason threadId=$threadId)")
+        while (true) {
+            val current = pendingSyntheticPauses.get()
+            if (current <= 0) return false
+            if (pendingSyntheticPauses.compareAndSet(current, current - 1)) {
+                log.debug("consumeIfSynthetic: swallowed synthetic-pause stop (reason=$reason threadId=$threadId)")
+                return true
+            }
         }
-        return newValue >= 0
     }
 
     // ---- the wrapper itself ----------------------------------------

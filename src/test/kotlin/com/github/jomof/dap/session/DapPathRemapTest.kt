@@ -44,4 +44,11 @@ class DapPathRemapTest {
         assertEquals("/anywhere/file.cpp", empty.toLocal("/anywhere/file.cpp"))
         assertEquals("/anywhere/file.cpp", empty.toAdapter("/anywhere/file.cpp"))
     }
+
+    @Test fun `partial directory name matches are ignored`() {
+        assertEquals(
+            "/build/src-other/foo.cpp",
+            remap.toLocal("/build/src-other/foo.cpp"),
+        )
+    }
 }
