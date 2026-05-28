@@ -68,7 +68,8 @@ open class CodeLldbDownloaderImpl(
         val target = cacheRoot.resolve(release.tagName)
         downloadAndExtract(asset0.downloadUrl, target)
         markExecutables(target)
-        return adapterBinary(target)
+        return completeInstallAdapter(target)
+            ?: throw IOException("CodeLLDB install ${release.tagName} is incomplete under $target")
     }
 
     /**
@@ -82,10 +83,7 @@ open class CodeLldbDownloaderImpl(
         if (!root.isDirectory) return null
         return root.listFiles { f -> f.isDirectory }
             ?.sortedWith { f1, f2 -> compareSemVer(f2.name, f1.name) }
-            ?.firstNotNullOfOrNull { dir ->
-                val candidate = adapterBinary(dir.toPath())
-                if (Files.isExecutable(candidate)) candidate else null
-            }
+            ?.firstNotNullOfOrNull { dir -> completeInstallAdapter(dir.toPath()) }
     }
 
     /** Path of the adapter binary inside an extracted install rooted at [versionDir]. */
@@ -95,6 +93,12 @@ open class CodeLldbDownloaderImpl(
     /** Path of the bundled `liblldb` inside an extracted install rooted at [versionDir]. */
     fun liblldbBinary(versionDir: Path): Path =
         versionDir.resolve(CodeLldbAssetCatalog.liblldbPath(osName))
+
+    private fun completeInstallAdapter(versionDir: Path): Path? {
+        val adapter = adapterBinary(versionDir)
+        val liblldb = liblldbBinary(versionDir)
+        return if (Files.isExecutable(adapter) && Files.isRegularFile(liblldb)) adapter else null
+    }
 
     // ------------------------------------------------------------------
     // GitHub REST: latest release lookup.

@@ -127,18 +127,24 @@ class CodeLldbDownloaderTest {
 
     @Test fun `ensureInstalled is a no-op when cache already contains a binary`() {
         val cacheRoot = tmp.newFolder("cache").toPath()
+        val os = "Mac OS X"
         // Pre-seed the cache with a fake v9.9.9 install so we can
         // assert the downloader doesn't try to hit the network.
         val installed = cacheRoot
             .resolve("v9.9.9")
-            .resolve(CodeLldbAssetCatalog.adapterPath(System.getProperty("os.name") ?: "Mac OS X"))
+            .resolve(CodeLldbAssetCatalog.adapterPath(os))
+        val installedLib = cacheRoot
+            .resolve("v9.9.9")
+            .resolve(CodeLldbAssetCatalog.liblldbPath(os))
         Files.createDirectories(installed.parent)
+        Files.createDirectories(installedLib.parent)
         Files.write(installed, byteArrayOf(0x7F))
+        Files.write(installedLib, byteArrayOf(0x7F))
         installed.toFile().setExecutable(true)
 
         val downloader = object : CodeLldbDownloaderImpl(
             cacheRoot = cacheRoot,
-            osName = "Mac OS X",
+            osName = os,
             osArch = "aarch64",
         ) {
             override fun fetchLatestReleaseJson(): String =
@@ -156,6 +162,7 @@ class CodeLldbDownloaderTest {
         val cacheRoot = tmp.newFolder("cache").toPath()
         val vsixBytes = buildVsixBytes {
             entry("extension/adapter/codelldb", "binary-bytes".toByteArray())
+            entry("extension/lldb/lib/liblldb.dylib", "liblldb-bytes".toByteArray())
         }
         val downloader = object : CodeLldbDownloaderImpl(
             cacheRoot = cacheRoot,
@@ -214,11 +221,17 @@ class CodeLldbDownloaderTest {
         
         val v2Binary = v2Dir.resolve(CodeLldbAssetCatalog.adapterPath(os))
         val v10Binary = v10Dir.resolve(CodeLldbAssetCatalog.adapterPath(os))
+        val v2Lib = v2Dir.resolve(CodeLldbAssetCatalog.liblldbPath(os))
+        val v10Lib = v10Dir.resolve(CodeLldbAssetCatalog.liblldbPath(os))
         
         Files.createDirectories(v2Binary.parent)
         Files.createDirectories(v10Binary.parent)
+        Files.createDirectories(v2Lib.parent)
+        Files.createDirectories(v10Lib.parent)
         Files.write(v2Binary, byteArrayOf(0x02))
         Files.write(v10Binary, byteArrayOf(0x10))
+        Files.write(v2Lib, byteArrayOf(0x02))
+        Files.write(v10Lib, byteArrayOf(0x10))
         v2Binary.toFile().setExecutable(true)
         v10Binary.toFile().setExecutable(true)
         
@@ -227,6 +240,26 @@ class CodeLldbDownloaderTest {
         
         // Should resolve to the semantically higher v1.10.0 (lexical sort would pick v1.2.0)
         assertEquals(v10Binary.toAbsolutePath(), result?.toAbsolutePath())
+    }
+
+    @Test fun `existingInstall skips incomplete higher-version cache entries`() {
+        val cacheRoot = tmp.newFolder("cache").toPath()
+        val downloader = CodeLldbDownloaderImpl(cacheRoot = cacheRoot, osName = "Linux", osArch = "x86_64")
+
+        val partialAdapter = cacheRoot.resolve("v9.9.9").resolve(CodeLldbAssetCatalog.adapterPath("Linux"))
+        Files.createDirectories(partialAdapter.parent)
+        Files.write(partialAdapter, byteArrayOf(0x09))
+        partialAdapter.toFile().setExecutable(true)
+
+        val completeAdapter = cacheRoot.resolve("v1.0.0").resolve(CodeLldbAssetCatalog.adapterPath("Linux"))
+        val completeLib = cacheRoot.resolve("v1.0.0").resolve(CodeLldbAssetCatalog.liblldbPath("Linux"))
+        Files.createDirectories(completeAdapter.parent)
+        Files.createDirectories(completeLib.parent)
+        Files.write(completeAdapter, byteArrayOf(0x01))
+        Files.write(completeLib, byteArrayOf(0x01))
+        completeAdapter.toFile().setExecutable(true)
+
+        assertEquals(completeAdapter.toAbsolutePath(), downloader.existingInstall()?.toAbsolutePath())
     }
 
     @Test fun `adapterBinary and liblldbBinary compose paths off the version dir`() {
