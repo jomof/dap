@@ -9,10 +9,9 @@ import java.nio.file.Paths
  * Provisioner for the CodeLLDB adapter. Combines the two halves of the
  * problem:
  *  1. [resolve] looks for an already-installed copy in any of the
- *     well-known places — env override, our own download cache, the
- *     lsp4ij download cache (so users with lsp4ij installed get the
- *     same binary), and the VS Code extension dir — without ever
- *     touching the network.
+ *     well-known places — env override, our own download cache,
+ *     legacy read-only caches, and the VS Code extension dir —
+ *     without ever touching the network.
  *  2. [provision] does the same and, on miss, hands control to
  *     [CodeLldbDownloader] to fetch the release matching the host's
  *     OS/arch.
@@ -30,6 +29,8 @@ object CodeLldbAdapterProvisioner : DapAdapterProvisioner {
     override fun resolve(): Path? {
         envOverride()?.let { return it }
         downloaderCache()?.let { return it }
+        legacyDownloaderCache()?.let { return it }
+        lsp4ijCache()?.let { return it }
         vscodeExtensionCache()?.let { return it }
         return searchPath(BINARY_NAME)
     }
@@ -81,7 +82,22 @@ object CodeLldbAdapterProvisioner : DapAdapterProvisioner {
 
     private fun downloaderCache(): Path? = CodeLldbDownloader.existingInstall()
 
+    private fun legacyDownloaderCache(): Path? {
+        val root = Paths.get(System.getProperty("user.home"), ".cache", "dap-intellij", "codelldb")
+        return CodeLldbDownloaderImpl(cacheRoot = root).existingInstall()
+    }
 
+    /**
+     * `~/.lsp4ij/dap/codelldb/extension/adapter/codelldb`. We don't write
+     * here — but if the user already has lsp4ij installed, reusing its
+     * download avoids a second copy and keeps offline upgrades working.
+     */
+    private fun lsp4ijCache(): Path? {
+        val root = Paths.get(System.getProperty("user.home"), ".lsp4ij", "dap", "codelldb")
+        if (!Files.isDirectory(root)) return null
+        val candidate = root.resolve(CodeLldbAssetCatalog.adapterPath(System.getProperty("os.name") ?: ""))
+        return if (isCompleteExtensionAdapter(candidate)) candidate else null
+    }
 
     /**
      * `~/.vscode/extensions/vadimcn.vscode-lldb-<version>/adapter/codelldb`
@@ -97,9 +113,12 @@ object CodeLldbAdapterProvisioner : DapAdapterProvisioner {
             ?.sortedByDescending(java.io.File::getName)
             ?.firstNotNullOfOrNull { ext ->
                 val candidate = ext.toPath().resolve("adapter").resolve(BINARY_NAME)
-                if (Files.isExecutable(candidate)) candidate else null
+                if (isCompleteExtensionAdapter(candidate)) candidate else null
             }
     }
+
+    private fun isCompleteExtensionAdapter(candidate: Path): Boolean =
+        Files.isExecutable(candidate) && liblldbFor(candidate)?.let { Files.isRegularFile(it) } == true
 
     private fun searchPath(name: String): Path? {
         val pathEnv = System.getenv("PATH") ?: return null

@@ -61,9 +61,28 @@ class CodeLldbAdapterProvisionerTest {
         assertNull(CodeLldbAdapterProvisioner.liblldbFor(standalone))
     }
 
-    private fun createFile(path: Path): Path {
+    @Test fun `resolve reuses complete lsp4ij cache`() {
+        val oldHome = System.getProperty("user.home")
+        val home = tmp.newFolder("home").toPath()
+        try {
+            System.setProperty("user.home", home.toString())
+            val root = home.resolve(".lsp4ij/dap/codelldb")
+            val adapter = createFile(
+                root.resolve(CodeLldbAssetCatalog.adapterPath(System.getProperty("os.name") ?: "")),
+                executable = true,
+            )
+            createFile(root.resolve(CodeLldbAssetCatalog.liblldbPath(System.getProperty("os.name") ?: "")))
+
+            assertEquals(adapter.toAbsolutePath(), CodeLldbAdapterProvisioner.resolve()?.toAbsolutePath())
+        } finally {
+            System.setProperty("user.home", oldHome)
+        }
+    }
+
+    private fun createFile(path: Path, executable: Boolean = false): Path {
         Files.createDirectories(path.parent)
         Files.write(path, byteArrayOf(0x7F))
+        if (executable) path.toFile().setExecutable(true)
         return path
     }
 }
