@@ -19,6 +19,33 @@ class CodeLldbAdapterProvisionerTest {
 
     @get:Rule val tmp = TemporaryFolder()
 
+    @Test fun `lsp4ijCache reuses complete existing adapter from lsp4ij download`() {
+        val home = tmp.newFolder("home").toPath()
+        val root = home.resolve(".lsp4ij/dap/codelldb")
+        val adapter = createFile(
+            root.resolve(CodeLldbAssetCatalog.adapterPath(System.getProperty("os.name") ?: "")),
+            executable = true,
+        )
+        createFile(root.resolve(CodeLldbAssetCatalog.liblldbPath(System.getProperty("os.name") ?: "")))
+
+        assertEquals(
+            adapter.toAbsolutePath(),
+            CodeLldbAdapterProvisioner.lsp4ijCache(home)?.toAbsolutePath(),
+        )
+    }
+
+    @Test fun `lsp4ijCache ignores incomplete adapter without bundled liblldb`() {
+        val home = tmp.newFolder("home").toPath()
+        createFile(
+            home
+                .resolve(".lsp4ij/dap/codelldb")
+                .resolve(CodeLldbAssetCatalog.adapterPath(System.getProperty("os.name") ?: "")),
+            executable = true,
+        )
+
+        assertNull(CodeLldbAdapterProvisioner.lsp4ijCache(home))
+    }
+
     @Test fun `liblldbFor finds dylib next to adapter in lsp4ij-style layout`() {
         val root = tmp.newFolder("install").toPath()
         val adapter = createFile(root.resolve("extension/adapter/codelldb"))
@@ -61,9 +88,10 @@ class CodeLldbAdapterProvisionerTest {
         assertNull(CodeLldbAdapterProvisioner.liblldbFor(standalone))
     }
 
-    private fun createFile(path: Path): Path {
+    private fun createFile(path: Path, executable: Boolean = false): Path {
         Files.createDirectories(path.parent)
         Files.write(path, byteArrayOf(0x7F))
+        if (executable) path.toFile().setExecutable(true)
         return path
     }
 }
