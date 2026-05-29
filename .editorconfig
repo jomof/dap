@@ -1,0 +1,15 @@
+# Single source of truth for code style, read by both IntelliJ and the
+# ktlint rules detekt runs. Without this, IntelliJ and detekt disagree
+# about imports: IntelliJ collapses Java static imports to a wildcard at
+# its default threshold (3 names), while detekt's `NoWildcardImports`
+# forbids wildcards entirely — so "Optimize Imports" silently produces
+# code that fails `./gradlew check`.
+root = true
+
+[*.{kt,kts}]
+# Never auto-collapse to `import foo.*`. Keeps every import explicit,
+# which is what detekt's NoWildcardImports enforces. The high values
+# disable IntelliJ's star-import threshold for both top-level symbols
+# and members/statics (e.g. org.junit.Assert.assertEquals).
+ij_kotlin_name_count_to_use_star_import = 2147483647
+ij_kotlin_name_count_to_use_star_import_for_members = 2147483647
