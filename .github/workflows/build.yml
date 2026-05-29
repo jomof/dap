@@ -1,0 +1,53 @@
+name: Build
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+  workflow_dispatch:
+
+# Cancel in-progress runs for the same ref when a new commit is pushed.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build & test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # `check` = compile + unit tests + detekt. Run under bash on every OS
+      # (git-bash ships on the Windows runner) so a single invocation works.
+      # Integration tests stay off — they are opt-in via DAP_INTEGRATION_TESTS
+      # and require real debug adapters not present on the runners.
+      - name: Build and test
+        shell: bash
+        run: ./gradlew check --stacktrace
+
+      - name: Upload test & detekt reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports-${{ matrix.os }}
+          path: |
+            build/reports/tests/
+            build/reports/detekt/
+          if-no-files-found: ignore
+          retention-days: 7
