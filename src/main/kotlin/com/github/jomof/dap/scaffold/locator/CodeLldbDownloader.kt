@@ -1,6 +1,5 @@
 package com.github.jomof.dap.scaffold.locator
 
-import com.github.jomof.dap.scaffold.locator.CodeLldbDownloaderImpl.Companion.SAFE_ENTRY_PREFIX
 import java.io.IOException
 import java.io.InputStream
 import java.net.URI
