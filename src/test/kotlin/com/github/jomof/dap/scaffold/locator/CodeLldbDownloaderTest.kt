@@ -1,9 +1,6 @@
 package com.github.jomof.dap.scaffold.locator
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Assert.fail
+import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -211,20 +208,20 @@ class CodeLldbDownloaderTest {
         val v2Dir = cacheRoot.resolve("v1.2.0")
         val v10Dir = cacheRoot.resolve("v1.10.0")
         val os = System.getProperty("os.name") ?: "Mac OS X"
-        
+
         val v2Binary = v2Dir.resolve(CodeLldbAssetCatalog.adapterPath(os))
         val v10Binary = v10Dir.resolve(CodeLldbAssetCatalog.adapterPath(os))
-        
+
         Files.createDirectories(v2Binary.parent)
         Files.createDirectories(v10Binary.parent)
         Files.write(v2Binary, byteArrayOf(0x02))
         Files.write(v10Binary, byteArrayOf(0x10))
         v2Binary.toFile().setExecutable(true)
         v10Binary.toFile().setExecutable(true)
-        
+
         val downloader = CodeLldbDownloaderImpl(cacheRoot = cacheRoot, osName = os)
         val result = downloader.existingInstall()
-        
+
         // Should resolve to the semantically higher v1.10.0 (lexical sort would pick v1.2.0)
         assertEquals(v10Binary.toAbsolutePath(), result?.toAbsolutePath())
     }

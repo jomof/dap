@@ -1,5 +1,7 @@
 package com.github.jomof.dap.scaffold.locator
 
+import com.github.jomof.dap.scaffold.locator.CodeLldbAdapterProvisioner.provision
+import com.github.jomof.dap.scaffold.locator.CodeLldbAdapterProvisioner.resolve
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -80,8 +82,6 @@ object CodeLldbAdapterProvisioner : DapAdapterProvisioner {
     }
 
     private fun downloaderCache(): Path? = CodeLldbDownloader.existingInstall()
-
-
 
     /**
      * `~/.vscode/extensions/vadimcn.vscode-lldb-<version>/adapter/codelldb`

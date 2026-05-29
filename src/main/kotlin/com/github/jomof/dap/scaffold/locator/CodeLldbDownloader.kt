@@ -1,5 +1,6 @@
 package com.github.jomof.dap.scaffold.locator
 
+import com.github.jomof.dap.scaffold.locator.CodeLldbDownloaderImpl.Companion.SAFE_ENTRY_PREFIX
 import java.io.IOException
 import java.io.InputStream
 import java.net.URI
@@ -202,7 +203,7 @@ open class CodeLldbDownloaderImpl(
             stream.filter { Files.isRegularFile(it) }
                 .forEach { file ->
                     val pathStr = file.toString().replace('\\', '/')
-                    if (pathStr.contains("/adapter/") || pathStr.contains("/lldb/bin/") || pathStr.contains("/lldb/lib/") || pathStr.contains("/bin/")) {
+                    if (EXECUTABLE_PATH_MARKERS.any { pathStr.contains(it) }) {
                         runCatching { file.toFile().setExecutable(true) }
                     }
                 }
@@ -219,6 +220,18 @@ open class CodeLldbDownloaderImpl(
          * VSIX packaging metadata we don't need.
          */
         private const val SAFE_ENTRY_PREFIX = "extension/"
+
+        /**
+         * Path fragments (normalised to `/`) whose files must be marked
+         * executable after extraction — the adapter binary and the
+         * bundled lldb tools/libraries.
+         */
+        private val EXECUTABLE_PATH_MARKERS = listOf(
+            "/adapter/",
+            "/lldb/bin/",
+            "/lldb/lib/",
+            "/bin/",
+        )
 
         /**
          * Default cache root: `~/.cache/dapij/codelldb`. Chosen
