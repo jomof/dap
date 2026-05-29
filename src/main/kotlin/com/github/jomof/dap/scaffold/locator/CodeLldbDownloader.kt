@@ -202,15 +202,12 @@ open class CodeLldbDownloaderImpl(
             stream.filter { Files.isRegularFile(it) }
                 .forEach { file ->
                     val pathStr = file.toString().replace('\\', '/')
-                    if (isExecutablePayload(pathStr)) {
+                    if (EXECUTABLE_PATH_MARKERS.any { pathStr.contains(it) }) {
                         runCatching { file.toFile().setExecutable(true) }
                     }
                 }
         }
     }
-
-    private fun isExecutablePayload(path: String): Boolean =
-        EXECUTABLE_PATH_PARTS.any { path.contains(it) }
 
     companion object {
         private const val RELEASES_LATEST_URL =
@@ -222,7 +219,18 @@ open class CodeLldbDownloaderImpl(
          * VSIX packaging metadata we don't need.
          */
         private const val SAFE_ENTRY_PREFIX = "extension/"
-        private val EXECUTABLE_PATH_PARTS = listOf("/adapter/", "/lldb/bin/", "/lldb/lib/", "/bin/")
+
+        /**
+         * Path fragments (normalised to `/`) whose files must be marked
+         * executable after extraction — the adapter binary and the
+         * bundled lldb tools/libraries.
+         */
+        private val EXECUTABLE_PATH_MARKERS = listOf(
+            "/adapter/",
+            "/lldb/bin/",
+            "/lldb/lib/",
+            "/bin/",
+        )
 
         /**
          * Default cache root: `~/.cache/dapij/codelldb`. Chosen
