@@ -81,8 +81,6 @@ object CodeLldbAdapterProvisioner : DapAdapterProvisioner {
 
     private fun downloaderCache(): Path? = CodeLldbDownloader.existingInstall()
 
-
-
     /**
      * `~/.vscode/extensions/vadimcn.vscode-lldb-<version>/adapter/codelldb`
      * for users who installed CodeLLDB via the VS Code extension. The

@@ -202,12 +202,15 @@ open class CodeLldbDownloaderImpl(
             stream.filter { Files.isRegularFile(it) }
                 .forEach { file ->
                     val pathStr = file.toString().replace('\\', '/')
-                    if (pathStr.contains("/adapter/") || pathStr.contains("/lldb/bin/") || pathStr.contains("/lldb/lib/") || pathStr.contains("/bin/")) {
+                    if (isExecutablePayload(pathStr)) {
                         runCatching { file.toFile().setExecutable(true) }
                     }
                 }
         }
     }
+
+    private fun isExecutablePayload(path: String): Boolean =
+        EXECUTABLE_PATH_PARTS.any { path.contains(it) }
 
     companion object {
         private const val RELEASES_LATEST_URL =
@@ -219,6 +222,7 @@ open class CodeLldbDownloaderImpl(
          * VSIX packaging metadata we don't need.
          */
         private const val SAFE_ENTRY_PREFIX = "extension/"
+        private val EXECUTABLE_PATH_PARTS = listOf("/adapter/", "/lldb/bin/", "/lldb/lib/", "/bin/")
 
         /**
          * Default cache root: `~/.cache/dapij/codelldb`. Chosen
