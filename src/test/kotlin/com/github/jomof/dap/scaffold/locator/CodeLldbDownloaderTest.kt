@@ -127,18 +127,19 @@ class CodeLldbDownloaderTest {
 
     @Test fun `ensureInstalled is a no-op when cache already contains a binary`() {
         val cacheRoot = tmp.newFolder("cache").toPath()
+        val os = "Mac OS X"
         // Pre-seed the cache with a fake v9.9.9 install so we can
         // assert the downloader doesn't try to hit the network.
         val installed = cacheRoot
             .resolve("v9.9.9")
-            .resolve(CodeLldbAssetCatalog.adapterPath(System.getProperty("os.name") ?: "Mac OS X"))
+            .resolve(CodeLldbAssetCatalog.adapterPath(os))
         Files.createDirectories(installed.parent)
         Files.write(installed, byteArrayOf(0x7F))
         installed.toFile().setExecutable(true)
 
         val downloader = object : CodeLldbDownloaderImpl(
             cacheRoot = cacheRoot,
-            osName = "Mac OS X",
+            osName = os,
             osArch = "aarch64",
         ) {
             override fun fetchLatestReleaseJson(): String =
