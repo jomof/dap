@@ -32,6 +32,7 @@ object CodeLldbAdapterProvisioner : DapAdapterProvisioner {
     override fun resolve(): Path? {
         envOverride()?.let { return it }
         downloaderCache()?.let { return it }
+        lsp4ijCache()?.let { return it }
         vscodeExtensionCache()?.let { return it }
         return searchPath(BINARY_NAME)
     }
@@ -84,6 +85,21 @@ object CodeLldbAdapterProvisioner : DapAdapterProvisioner {
     private fun downloaderCache(): Path? = CodeLldbDownloader.existingInstall()
 
     /**
+     * `~/.lsp4ij/dap/codelldb/extension/adapter/codelldb`. We don't write
+     * here — but if the user already has lsp4ij installed, reusing its
+     * download avoids a second copy and keeps offline setups working.
+     */
+    internal fun lsp4ijCache(
+        home: Path = Paths.get(System.getProperty("user.home")),
+        osName: String = System.getProperty("os.name") ?: "",
+    ): Path? {
+        val root = home.resolve(".lsp4ij").resolve("dap").resolve("codelldb")
+        if (!Files.isDirectory(root)) return null
+        val candidate = root.resolve(CodeLldbAssetCatalog.adapterPath(osName))
+        return bundledAdapter(candidate)
+    }
+
+    /**
      * `~/.vscode/extensions/vadimcn.vscode-lldb-<version>/adapter/codelldb`
      * for users who installed CodeLLDB via the VS Code extension. The
      * extension dir is *flat* (the `extension/` prefix is stripped when
@@ -97,9 +113,12 @@ object CodeLldbAdapterProvisioner : DapAdapterProvisioner {
             ?.sortedByDescending(java.io.File::getName)
             ?.firstNotNullOfOrNull { ext ->
                 val candidate = ext.toPath().resolve("adapter").resolve(BINARY_NAME)
-                if (Files.isExecutable(candidate)) candidate else null
+                bundledAdapter(candidate)
             }
     }
+
+    private fun bundledAdapter(candidate: Path): Path? =
+        if (Files.isExecutable(candidate) && liblldbFor(candidate) != null) candidate else null
 
     private fun searchPath(name: String): Path? {
         val pathEnv = System.getenv("PATH") ?: return null

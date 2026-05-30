@@ -61,6 +61,28 @@ class CodeLldbAdapterProvisionerTest {
         assertNull(CodeLldbAdapterProvisioner.liblldbFor(standalone))
     }
 
+    @Test fun `lsp4ijCache reuses complete bundled install`() {
+        val home = tmp.newFolder("home").toPath()
+        val root = home.resolve(".lsp4ij/dap/codelldb")
+        val adapter = createFile(root.resolve("extension/adapter/codelldb"))
+        createFile(root.resolve("extension/lldb/lib/liblldb.so"))
+        adapter.toFile().setExecutable(true)
+
+        assertEquals(
+            adapter.toAbsolutePath(),
+            CodeLldbAdapterProvisioner.lsp4ijCache(home = home, osName = "Linux")?.toAbsolutePath(),
+        )
+    }
+
+    @Test fun `lsp4ijCache rejects adapter without bundled liblldb`() {
+        val home = tmp.newFolder("home").toPath()
+        val root = home.resolve(".lsp4ij/dap/codelldb")
+        val adapter = createFile(root.resolve("extension/adapter/codelldb"))
+        adapter.toFile().setExecutable(true)
+
+        assertNull(CodeLldbAdapterProvisioner.lsp4ijCache(home = home, osName = "Linux"))
+    }
+
     private fun createFile(path: Path): Path {
         Files.createDirectories(path.parent)
         Files.write(path, byteArrayOf(0x7F))

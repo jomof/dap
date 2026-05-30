@@ -69,7 +69,8 @@ open class CodeLldbDownloaderImpl(
         val target = cacheRoot.resolve(release.tagName)
         downloadAndExtract(asset0.downloadUrl, target)
         markExecutables(target)
-        return adapterBinary(target)
+        return completeInstall(target)
+            ?: throw IOException("CodeLLDB install ${release.tagName} is incomplete after extraction")
     }
 
     /**
@@ -84,8 +85,7 @@ open class CodeLldbDownloaderImpl(
         return root.listFiles { f -> f.isDirectory }
             ?.sortedWith { f1, f2 -> compareSemVer(f2.name, f1.name) }
             ?.firstNotNullOfOrNull { dir ->
-                val candidate = adapterBinary(dir.toPath())
-                if (Files.isExecutable(candidate)) candidate else null
+                completeInstall(dir.toPath())
             }
     }
 
@@ -208,6 +208,12 @@ open class CodeLldbDownloaderImpl(
                     }
                 }
         }
+    }
+
+    private fun completeInstall(versionDir: Path): Path? {
+        val adapter = adapterBinary(versionDir)
+        val liblldb = liblldbBinary(versionDir)
+        return if (Files.isExecutable(adapter) && Files.exists(liblldb)) adapter else null
     }
 
     companion object {

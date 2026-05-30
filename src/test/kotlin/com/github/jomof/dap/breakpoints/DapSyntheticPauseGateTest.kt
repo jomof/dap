@@ -227,6 +227,45 @@ class DapSyntheticPauseGateTest {
         )
     }
 
+    @Test fun `real breakpoint hit is not consumed while synthetic pause is pending`() = runBlocking {
+        val recorder = AdapterRecorder()
+        val gate = recorder.gate()
+        gate.recordThreadStarted(7)
+        gate.markRunning()
+
+        val wrapper = async(start = CoroutineStart.UNDISPATCHED) {
+            gate.wrappedSetBreakpoints(buildArgs(line = 42))
+        }
+        withTimeout(TIMEOUT) {
+            while (gate.pendingSyntheticPauseCount() == 0) delay(2.milliseconds)
+        }
+
+        val consumed = gate.consumeIfSynthetic(
+            reason = "breakpoint",
+            threadId = 7,
+            hitBreakpointIds = arrayOf(123),
+        )
+        assertFalse(
+            "a stop with concrete hitBreakpointIds is the user's breakpoint hit, not our synthetic pause",
+            consumed,
+        )
+
+        val response = withTimeout(TIMEOUT) { wrapper.await() }
+        assertEquals(1, response.breakpoints.size)
+        assertEquals(1, recorder.pauseCalls.get())
+        assertEquals(
+            "real breakpoint hits must remain stopped for the IDE instead of being auto-resumed",
+            0,
+            recorder.continueCalls.get(),
+        )
+        assertEquals(
+            "counter should be rolled back after preserving the real stop",
+            0,
+            gate.pendingSyntheticPauseCount(),
+        )
+        assertFalse("inferior should remain stopped on the real breakpoint hit", gate.inferiorRunning)
+    }
+
     @Test fun `pause failure falls back to direct setBreakpoints without leaking the counter`() = runBlocking {
         val recorder = AdapterRecorder(pauseThrows = RuntimeException("simulated adapter crash"))
         val gate = recorder.gate()
