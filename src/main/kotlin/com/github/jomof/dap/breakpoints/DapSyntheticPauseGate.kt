@@ -165,14 +165,15 @@ class DapSyntheticPauseGate(
     fun consumeIfSynthetic(
         reason: String?,
         threadId: Int?,
-        hitBreakpointIds: IntArray? = null,
+        hitBreakpointIds: Array<Int>? = null,
     ): Boolean {
         inferiorRunning = false
         if (threadId != null) lastKnownThreadId = threadId
-        if (!hitBreakpointIds.isNullOrEmpty()) {
+        val hitIds = hitBreakpointIds?.toList().orEmpty()
+        if (hitIds.isNotEmpty()) {
             log.debug(
                 "consumeIfSynthetic: preserving real breakpoint stop " +
-                    "(reason=$reason threadId=$threadId hitBreakpointIds=${hitBreakpointIds.toList()})",
+                    "(reason=$reason threadId=$threadId hitBreakpointIds=$hitIds)",
             )
             return false
         }

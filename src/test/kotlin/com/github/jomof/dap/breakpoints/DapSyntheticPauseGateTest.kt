@@ -243,7 +243,7 @@ class DapSyntheticPauseGateTest {
         val consumed = gate.consumeIfSynthetic(
             reason = "breakpoint",
             threadId = 7,
-            hitBreakpointIds = intArrayOf(123),
+            hitBreakpointIds = arrayOf(123),
         )
         assertFalse(
             "a stop with concrete hitBreakpointIds is the user's breakpoint hit, not our synthetic pause",
