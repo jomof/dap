@@ -32,6 +32,7 @@ object CodeLldbAdapterProvisioner : DapAdapterProvisioner {
     override fun resolve(): Path? {
         envOverride()?.let { return it }
         downloaderCache()?.let { return it }
+        lsp4ijCache()?.let { return it }
         vscodeExtensionCache()?.let { return it }
         return searchPath(BINARY_NAME)
     }
@@ -84,6 +85,19 @@ object CodeLldbAdapterProvisioner : DapAdapterProvisioner {
     private fun downloaderCache(): Path? = CodeLldbDownloader.existingInstall()
 
     /**
+     * `~/.lsp4ij/dap/codelldb/extension/adapter/codelldb`. We don't write
+     * here — but if the user already has lsp4ij installed, reusing its
+     * download avoids a second copy and keeps offline setups working.
+     */
+    private fun lsp4ijCache(): Path? =
+        lsp4ijCache(Paths.get(System.getProperty("user.home")), System.getProperty("os.name") ?: "")
+
+    internal fun lsp4ijCache(home: Path, osName: String): Path? {
+        val root = home.resolve(".lsp4ij").resolve("dap").resolve("codelldb")
+        return completeExtensionInstall(root.resolve(CodeLldbAssetCatalog.adapterPath(osName)))
+    }
+
+    /**
      * `~/.vscode/extensions/vadimcn.vscode-lldb-<version>/adapter/codelldb`
      * for users who installed CodeLLDB via the VS Code extension. The
      * extension dir is *flat* (the `extension/` prefix is stripped when
@@ -91,15 +105,23 @@ object CodeLldbAdapterProvisioner : DapAdapterProvisioner {
      * directly instead of `extension/adapter/...`.
      */
     private fun vscodeExtensionCache(): Path? {
-        val home = Paths.get(System.getProperty("user.home"), ".vscode", "extensions").toFile()
-        if (!home.isDirectory) return null
-        return home.listFiles { file -> file.isDirectory && file.name.startsWith("vadimcn.vscode-lldb-") }
+        val home = Paths.get(System.getProperty("user.home"))
+        return vscodeExtensionCache(home)
+    }
+
+    internal fun vscodeExtensionCache(home: Path): Path? {
+        val extensions = home.resolve(".vscode").resolve("extensions").toFile()
+        if (!extensions.isDirectory) return null
+        return extensions.listFiles { file -> file.isDirectory && file.name.startsWith("vadimcn.vscode-lldb-") }
             ?.sortedByDescending(java.io.File::getName)
             ?.firstNotNullOfOrNull { ext ->
                 val candidate = ext.toPath().resolve("adapter").resolve(BINARY_NAME)
-                if (Files.isExecutable(candidate)) candidate else null
+                completeExtensionInstall(candidate)
             }
     }
+
+    private fun completeExtensionInstall(candidate: Path): Path? =
+        if (Files.isExecutable(candidate) && liblldbFor(candidate) != null) candidate else null
 
     private fun searchPath(name: String): Path? {
         val pathEnv = System.getenv("PATH") ?: return null

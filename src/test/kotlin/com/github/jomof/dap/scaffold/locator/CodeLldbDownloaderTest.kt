@@ -135,6 +135,11 @@ class CodeLldbDownloaderTest {
         Files.createDirectories(installed.parent)
         Files.write(installed, byteArrayOf(0x7F))
         installed.toFile().setExecutable(true)
+        val liblldb = cacheRoot
+            .resolve("v9.9.9")
+            .resolve(CodeLldbAssetCatalog.liblldbPath("Mac OS X"))
+        Files.createDirectories(liblldb.parent)
+        Files.write(liblldb, byteArrayOf(0x7F))
 
         val downloader = object : CodeLldbDownloaderImpl(
             cacheRoot = cacheRoot,
@@ -156,6 +161,7 @@ class CodeLldbDownloaderTest {
         val cacheRoot = tmp.newFolder("cache").toPath()
         val vsixBytes = buildVsixBytes {
             entry("extension/adapter/codelldb", "binary-bytes".toByteArray())
+            entry("extension/lldb/lib/liblldb.dylib", "liblldb-bytes".toByteArray())
         }
         val downloader = object : CodeLldbDownloaderImpl(
             cacheRoot = cacheRoot,
@@ -186,6 +192,36 @@ class CodeLldbDownloaderTest {
         assertEquals("binary-bytes", String(Files.readAllBytes(result)))
     }
 
+    @Test fun `ensureInstalled rejects downloaded install without bundled liblldb`() {
+        val cacheRoot = tmp.newFolder("cache").toPath()
+        val vsixBytes = buildVsixBytes {
+            entry("extension/adapter/codelldb", "binary-bytes".toByteArray())
+        }
+        val downloader = object : CodeLldbDownloaderImpl(
+            cacheRoot = cacheRoot,
+            osName = "Mac OS X",
+            osArch = "aarch64",
+        ) {
+            override fun fetchLatestReleaseJson(): String = """
+                {
+                  "tag_name":"v1.12.2",
+                  "assets":[
+                    {"name":"codelldb-darwin-arm64.vsix","browser_download_url":"http://example.test/codelldb-darwin-arm64.vsix"}
+                  ]
+                }
+            """.trimIndent()
+
+            override fun openAssetStream(url: String): InputStream = ByteArrayInputStream(vsixBytes)
+        }
+
+        try {
+            downloader.ensureInstalled()
+            fail("expected IOException for incomplete install")
+        } catch (e: IOException) {
+            assertTrue(e.message?.contains("incomplete") == true)
+        }
+    }
+
     @Test fun `ensureInstalled fails fast on unknown host`() {
         val downloader = CodeLldbDownloaderImpl(
             cacheRoot = tmp.newFolder("cache").toPath(),
@@ -205,6 +241,19 @@ class CodeLldbDownloaderTest {
         assertNull(downloader.existingInstall())
     }
 
+    @Test fun `existingInstall ignores executable adapter missing bundled liblldb`() {
+        val cacheRoot = tmp.newFolder("cache").toPath()
+        val installed = cacheRoot
+            .resolve("v1.12.0")
+            .resolve(CodeLldbAssetCatalog.adapterPath("Linux"))
+        Files.createDirectories(installed.parent)
+        Files.write(installed, byteArrayOf(0x7F))
+        installed.toFile().setExecutable(true)
+
+        val downloader = CodeLldbDownloaderImpl(cacheRoot = cacheRoot, osName = "Linux")
+        assertNull(downloader.existingInstall())
+    }
+
     @Test fun `existingInstall picks version based on SemVer comparison instead of lexical sorting`() {
         val cacheRoot = tmp.newFolder("cache").toPath()
         // Create directory structures for v1.2.0 and v1.10.0
@@ -221,6 +270,12 @@ class CodeLldbDownloaderTest {
         Files.write(v10Binary, byteArrayOf(0x10))
         v2Binary.toFile().setExecutable(true)
         v10Binary.toFile().setExecutable(true)
+        val v2Lib = v2Dir.resolve(CodeLldbAssetCatalog.liblldbPath(os))
+        val v10Lib = v10Dir.resolve(CodeLldbAssetCatalog.liblldbPath(os))
+        Files.createDirectories(v2Lib.parent)
+        Files.createDirectories(v10Lib.parent)
+        Files.write(v2Lib, byteArrayOf(0x02))
+        Files.write(v10Lib, byteArrayOf(0x10))
 
         val downloader = CodeLldbDownloaderImpl(cacheRoot = cacheRoot, osName = os)
         val result = downloader.existingInstall()
