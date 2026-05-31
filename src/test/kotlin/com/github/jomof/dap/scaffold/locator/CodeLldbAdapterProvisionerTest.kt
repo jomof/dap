@@ -19,6 +19,50 @@ class CodeLldbAdapterProvisionerTest {
 
     @get:Rule val tmp = TemporaryFolder()
 
+    @Test fun `lsp4ij cache resolves complete extension-style install`() {
+        val home = tmp.newFolder("home").toPath()
+        val adapter = createExecutable(
+            home.resolve(".lsp4ij/dap/codelldb/extension/adapter/codelldb"),
+        )
+        createFile(home.resolve(".lsp4ij/dap/codelldb/extension/lldb/lib/liblldb.so"))
+
+        assertEquals(
+            adapter.toAbsolutePath(),
+            CodeLldbAdapterProvisioner.lsp4ijCache(home, "Linux")?.toAbsolutePath(),
+        )
+    }
+
+    @Test fun `lsp4ij cache ignores adapter without bundled liblldb`() {
+        val home = tmp.newFolder("home").toPath()
+        createExecutable(home.resolve(".lsp4ij/dap/codelldb/extension/adapter/codelldb"))
+
+        assertNull(CodeLldbAdapterProvisioner.lsp4ijCache(home, "Linux"))
+    }
+
+    @Test fun `vs code extension cache ignores incomplete extension`() {
+        val home = tmp.newFolder("home").toPath()
+        createExecutable(home.resolve(".vscode/extensions/vadimcn.vscode-lldb-1.12.0/adapter/codelldb"))
+
+        assertNull(CodeLldbAdapterProvisioner.vscodeExtensionCache(home))
+    }
+
+    @Test fun `vs code extension cache resolves newest complete extension`() {
+        val home = tmp.newFolder("home").toPath()
+        createExecutable(
+            home.resolve(".vscode/extensions/vadimcn.vscode-lldb-1.10.0/adapter/codelldb"),
+        )
+        createFile(home.resolve(".vscode/extensions/vadimcn.vscode-lldb-1.10.0/lldb/lib/liblldb.so"))
+        val newAdapter = createExecutable(
+            home.resolve(".vscode/extensions/vadimcn.vscode-lldb-1.12.0/adapter/codelldb"),
+        )
+        createFile(home.resolve(".vscode/extensions/vadimcn.vscode-lldb-1.12.0/lldb/lib/liblldb.so"))
+
+        assertEquals(
+            newAdapter.toAbsolutePath(),
+            CodeLldbAdapterProvisioner.vscodeExtensionCache(home)?.toAbsolutePath(),
+        )
+    }
+
     @Test fun `liblldbFor finds dylib next to adapter in lsp4ij-style layout`() {
         val root = tmp.newFolder("install").toPath()
         val adapter = createFile(root.resolve("extension/adapter/codelldb"))
@@ -66,4 +110,7 @@ class CodeLldbAdapterProvisionerTest {
         Files.write(path, byteArrayOf(0x7F))
         return path
     }
+
+    private fun createExecutable(path: Path): Path =
+        createFile(path).also { it.toFile().setExecutable(true) }
 }
